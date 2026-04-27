@@ -14,6 +14,8 @@ const openEventFormBtn = document.getElementById("openEventFormBtn");
 const adminGastronomyList = document.getElementById("adminGastronomyList");
 const adminGastronomyState = document.getElementById("adminGastronomyState");
 const saveGastronomySelectionBtn = document.getElementById("saveGastronomySelectionBtn");
+const gastronomySelectionPanel = document.getElementById("gastronomySelectionPanel");
+const openGastronomyPanelBtn = document.getElementById("openGastronomyPanelBtn");
 const adminUserMenu = document.getElementById("adminUserMenu");
 const adminUserMenuBtn = document.getElementById("adminUserMenuBtn");
 const adminUserDropdown = document.getElementById("adminUserDropdown");
@@ -21,6 +23,8 @@ const adminUserEmail = document.getElementById("adminUserEmail");
 const headerLogoutBtn = document.getElementById("headerLogoutBtn");
 
 const TOKEN_KEY = "mercado_admin_token";
+/** Aviso no front; o servidor aceita ate ~25 MB (ver uploadImage). */
+const IMAGE_SOFT_LIMIT_BYTES = 5 * 1024 * 1024;
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -35,10 +39,47 @@ function setAuthMode(isAuthenticated) {
   }
 }
 
+function clearImageSoftHints(root) {
+  root.querySelectorAll("[data-image-soft-warn]").forEach((el) => {
+    el.classList.add("hidden");
+    el.textContent = "";
+  });
+}
+
+function clearImageSoftHintForFileInput(input) {
+  if (!input) return;
+  const warn = input.parentElement?.querySelector("[data-image-soft-warn]");
+  if (!warn) return;
+  warn.classList.add("hidden");
+  warn.textContent = "";
+}
+
+function setupImageSoftLimitWarnings() {
+  const fileInputs = document.querySelectorAll(
+    'input[type="file"][accept*="image"][data-store-file-for], input[type="file"][accept*="image"][data-event-file-for]'
+  );
+  fileInputs.forEach((input) => {
+    input.addEventListener("change", () => {
+      const warn = input.parentElement?.querySelector("[data-image-soft-warn]");
+      if (!warn) return;
+      const file = input.files?.[0];
+      if (!file || file.size <= IMAGE_SOFT_LIMIT_BYTES) {
+        warn.classList.add("hidden");
+        warn.textContent = "";
+        return;
+      }
+      const mb = (file.size / (1024 * 1024)).toFixed(1);
+      warn.textContent = `Aviso: ~${mb} MB (acima da recomendacao de 5 MB). O envio continuara ao salvar.`;
+      warn.classList.remove("hidden");
+    });
+  });
+}
+
 function resetForm() {
   storeForm.reset();
   storeForm.elements.id.value = "";
   cancelEditBtn.classList.add("hidden");
+  clearImageSoftHints(storeForm);
   closeStoreForm();
 }
 
@@ -47,6 +88,7 @@ function resetEventForm() {
   eventForm.elements.id.value = "";
   eventForm.elements.highlight.checked = false;
   cancelEventEditBtn.classList.add("hidden");
+  clearImageSoftHints(eventForm);
   closeEventForm();
 }
 
@@ -72,6 +114,16 @@ function closeEventForm() {
   eventForm.classList.add("hidden");
   eventForm.classList.remove("grid");
   openEventFormBtn.textContent = "Adicionar evento";
+}
+
+function openGastronomySelectionPanel() {
+  gastronomySelectionPanel.classList.remove("hidden");
+  openGastronomyPanelBtn.textContent = "Fechar";
+}
+
+function closeGastronomySelectionPanel() {
+  gastronomySelectionPanel.classList.add("hidden");
+  openGastronomyPanelBtn.textContent = "Gerenciar selecao";
 }
 
 function setAdminMessage(message, type = "default") {
@@ -354,6 +406,7 @@ async function performLogout() {
   setAuthMode(false);
   resetForm();
   resetEventForm();
+  closeGastronomySelectionPanel();
   adminStoresGrid.innerHTML = "";
   adminEventsGrid.innerHTML = "";
   adminGastronomyList.innerHTML = "";
@@ -420,10 +473,19 @@ loginForm.addEventListener("submit", async (event) => {
     setAdminMessage(`Autenticado como ${data.admin.email}.`, "success");
     await loadAdminStores();
     await loadAdminEvents();
-    await loadGastronomySelection();
   } catch (error) {
     alert(error.message);
   }
+});
+
+openGastronomyPanelBtn.addEventListener("click", () => {
+  const isOpen = !gastronomySelectionPanel.classList.contains("hidden");
+  if (isOpen) {
+    closeGastronomySelectionPanel();
+    return;
+  }
+  openGastronomySelectionPanel();
+  loadGastronomySelection();
 });
 
 saveGastronomySelectionBtn.addEventListener("click", async () => {
@@ -465,6 +527,7 @@ storeForm.addEventListener("submit", async (event) => {
       const cover = await uploadAdminImageFile(imageFileInput.files[0]);
       storeForm.elements.imageUrl.value = cover.url || "";
       imageFileInput.value = "";
+      clearImageSoftHintForFileInput(imageFileInput);
     }
 
     if (logoFileInput?.files?.[0]) {
@@ -473,6 +536,7 @@ storeForm.addEventListener("submit", async (event) => {
       const logo = await uploadAdminImageFile(logoFileInput.files[0]);
       storeForm.elements.logoUrl.value = logo.url || "";
       logoFileInput.value = "";
+      clearImageSoftHintForFileInput(logoFileInput);
     }
 
     const formData = new FormData(storeForm);
@@ -549,6 +613,7 @@ eventForm.addEventListener("submit", async (event) => {
       const uploaded = await uploadAdminImageFile(fileInput.files[0]);
       eventForm.elements.imageUrl.value = uploaded.url || "";
       fileInput.value = "";
+      clearImageSoftHintForFileInput(fileInput);
     }
 
     const formData = new FormData(eventForm);
@@ -627,7 +692,6 @@ async function bootstrap() {
 
     await loadAdminStores();
     await loadAdminEvents();
-    await loadGastronomySelection();
   } catch (_error) {
     setAuthMode(false);
     localStorage.removeItem(TOKEN_KEY);
@@ -637,4 +701,5 @@ async function bootstrap() {
   }
 }
 
+setupImageSoftLimitWarnings();
 bootstrap();

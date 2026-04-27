@@ -21,6 +21,44 @@ const backToEventsBtn = document.getElementById("back-to-events-btn");
 const gastronomyState = document.getElementById("gastronomy-state");
 const gastronomyTrack = document.getElementById("gastronomy-track");
 const sectionsToAnimate = document.querySelectorAll(".section-enter");
+
+/** Capa quando a loja nao tem URL valida ou a imagem externa falha ao carregar. */
+const DEFAULT_STORE_IMAGE_URL =
+  "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1200";
+
+function resolveStoreCoverUrl(primary, secondary) {
+  const pick = (v) => {
+    if (v == null) return "";
+    const s = String(v).trim();
+    if (!s || /^null$/i.test(s) || /^undefined$/i.test(s)) return "";
+    return s;
+  };
+  return pick(primary) || pick(secondary) || DEFAULT_STORE_IMAGE_URL;
+}
+
+function bindStoreCoverFallback(img) {
+  if (!img) return;
+  img.addEventListener(
+    "error",
+    () => {
+      if (img.src !== DEFAULT_STORE_IMAGE_URL) {
+        img.src = DEFAULT_STORE_IMAGE_URL;
+      }
+    },
+    { once: true }
+  );
+}
+
+function dedupeGastronomyByStoreId(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const n = Number(item?.id);
+    if (!Number.isFinite(n)) return true;
+    if (seen.has(n)) return false;
+    seen.add(n);
+    return true;
+  });
+}
 const eventModal = document.getElementById("event-modal");
 
 function normalizeStore(store) {
@@ -28,7 +66,7 @@ function normalizeStore(store) {
   const normalizedCategory = normalizeText(rawCategory);
   return {
     ...store,
-    img: store.image_url || store.img || "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1200",
+    img: resolveStoreCoverUrl(store.image_url, store.img),
     logoUrl: store.logo_url || store.logoUrl || "",
     location: store.floor || store.location || "Localizacao a confirmar",
     hours: store.hours || "10:00 - 22:00",
@@ -71,7 +109,7 @@ function renderStores(filter = "all") {
     card.innerHTML = `
       <div class="relative">
         <div class="aspect-[16/9] overflow-hidden">
-          <img src="${store.img}" class="w-full h-full object-cover" alt="${store.name}">
+          <img src="${store.img}" class="store-cover-img w-full h-full object-cover" alt="${store.name}">
         </div>
         ${logoBlock}
       </div>
@@ -89,6 +127,7 @@ function renderStores(filter = "all") {
         ${socialActions}
       </div>
     `;
+    bindStoreCoverFallback(card.querySelector(".store-cover-img"));
     storeGrid.appendChild(card);
   });
 
@@ -259,19 +298,23 @@ function selectHighlightEvent(sortedEvents) {
 
 function renderGastronomy() {
   gastronomyTrack.innerHTML = "";
-  gastronomyTrack.classList.remove("is-marquee");
+  gastronomyTrack.classList.remove("is-marquee", "gastronomy-track--static");
 
-  if (!gastronomyItems.length) {
-    gastronomyState.textContent = "Nenhuma loja selecionada para a secao de gastronomia no momento.";
+  const uniqueItems = dedupeGastronomyByStoreId(gastronomyItems);
+  if (!uniqueItems.length) {
+    gastronomyState.textContent = "Nenhuma loja selecionada para a seção de gastronomia no momento.";
     return;
   }
 
-  const sequence = [...gastronomyItems, ...gastronomyItems];
+  const useMarquee = uniqueItems.length > 2;
+  const sequence = useMarquee
+    ? [...uniqueItems, ...uniqueItems, ...uniqueItems]
+    : [...uniqueItems];
   sequence.forEach((item) => {
     const card = document.createElement("article");
     card.className = "gastronomy-card";
     card.innerHTML = `
-      <img src="${item.image_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600"}" class="gastronomy-card-image" alt="${item.name}">
+      <img src="${resolveStoreCoverUrl(item.image_url)}" class="gastronomy-card-image gastronomy-cover-img" alt="${item.name}">
       <div class="gastronomy-card-body">
         <span class="text-[9px] font-bold uppercase tracking-[0.2em] text-amber-700">${item.cuisine_type}</span>
         <h4 class="mt-1 text-base font-serif italic text-slate-900 leading-tight line-clamp-1">${item.name}</h4>
@@ -281,11 +324,14 @@ function renderGastronomy() {
         </div>
       </div>
     `;
+    bindStoreCoverFallback(card.querySelector(".gastronomy-cover-img"));
     gastronomyTrack.appendChild(card);
   });
 
-  if (gastronomyItems.length > 1) {
+  if (useMarquee) {
     gastronomyTrack.classList.add("is-marquee");
+  } else {
+    gastronomyTrack.classList.add("gastronomy-track--static");
   }
   gastronomyState.textContent = "";
   if (window.lucide) window.lucide.createIcons();
@@ -345,7 +391,7 @@ async function loadPublicData() {
     const gastronomyData = await gastronomyResponse.json();
     stores = storesData.map(normalizeStore);
     events = eventsData;
-    gastronomyItems = gastronomyData;
+    gastronomyItems = dedupeGastronomyByStoreId(gastronomyData);
     renderCategoryFilters();
     renderStores();
     renderEvents();
@@ -372,7 +418,11 @@ function openModal(store) {
   modalDesc.innerText = store.desc || "Sem descrição disponível.";
   modalLoc.innerText = store.location || "Localização a confirmar";
   modalHours.innerText = store.hours || "Consulte a loja";
-  modalImg.src = store.img || "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1200";
+  modalImg.onerror = () => {
+    modalImg.onerror = null;
+    modalImg.src = DEFAULT_STORE_IMAGE_URL;
+  };
+  modalImg.src = store.img;
 
   modal.classList.add("is-open");
   document.body.style.overflow = "hidden";
@@ -402,6 +452,8 @@ function openEventModal(eventData) {
 function closeModal() {
   modal.classList.remove("is-open");
   document.body.style.overflow = "auto";
+  const modalImg = document.getElementById("modal-img");
+  if (modalImg) modalImg.onerror = null;
 }
 
 function closeEventModal() {

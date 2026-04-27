@@ -144,13 +144,15 @@
                     Imagem principal — URL ou arquivo (Cloudinary ao salvar)
                     <input type="url" name="imageUrl" placeholder="https://..." class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
                     <input type="file" accept="image/*" data-store-file-for="imageUrl" class="mt-2 block w-full max-w-[min(100%,320px)] text-xs text-slate-600">
-                    <p class="mt-1 text-[11px] text-slate-400">Imagem ate 5 MB. Com arquivo selecionado, o envio ao Cloudinary ocorre ao clicar em Salvar loja.</p>
+                    <p data-image-soft-warn class="hidden mt-1 text-[11px] font-medium text-amber-800" aria-live="polite"></p>
+                    <p class="mt-1 text-[11px] text-slate-400">Limite até 5MB.</p>
                 </label>
                 <label class="text-sm font-semibold text-slate-600 md:col-span-2">
                     Logo — URL ou arquivo (Cloudinary ao salvar)
                     <input type="url" name="logoUrl" placeholder="https://..." class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
                     <input type="file" accept="image/*" data-store-file-for="logoUrl" class="mt-2 block w-full max-w-[min(100%,320px)] text-xs text-slate-600">
-                    <p class="mt-1 text-[11px] text-slate-400">Imagem ate 5 MB. Com arquivo selecionado, o envio ao Cloudinary ocorre ao clicar em Salvar loja.</p>
+                    <p data-image-soft-warn class="hidden mt-1 text-[11px] font-medium text-amber-800" aria-live="polite"></p>
+                    <p class="mt-1 text-[11px] text-slate-400">Limite até 5MB.</p>
                 </label>
                 <label class="text-sm font-semibold text-slate-600">
                     Link do WhatsApp (opcional)
@@ -193,7 +195,8 @@
                         Imagem — URL ou arquivo (Cloudinary ao salvar)
                         <input type="url" name="imageUrl" placeholder="https://..." class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
                         <input type="file" accept="image/*" data-event-file-for="imageUrl" class="mt-2 block w-full max-w-[min(100%,320px)] text-xs text-slate-600">
-                        <p class="mt-1 text-[11px] text-slate-400">Imagem ate 5 MB. Com arquivo selecionado, o envio ao Cloudinary ocorre ao clicar em Salvar evento.</p>
+                        <p data-image-soft-warn class="hidden mt-1 text-[11px] font-medium text-amber-800" aria-live="polite"></p>
+                        <p class="mt-1 text-[11px] text-slate-400">Recomendamos ate 5 MB; arquivos maiores ainda podem ser enviados. Com arquivo selecionado, o envio ao Cloudinary ocorre ao clicar em Salvar evento.</p>
                     </label>
                     <label class="text-sm font-semibold text-slate-600 md:col-span-2 flex items-center gap-3">
                         <input type="checkbox" name="highlight" class="w-4 h-4 rounded border-slate-300">
@@ -208,15 +211,21 @@
             </div>
 
             <div class="border-t border-[#eddcd2] pt-8 space-y-6">
-                <div class="flex flex-col gap-2">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <h2 class="text-3xl italic text-slate-900">Gastronomia na vitrine</h2>
-                    <p class="text-sm text-slate-500 max-w-3xl">
-                        Marque as lojas que devem aparecer na secao de gastronomia do site publico. Os dados exibidos (nome, categoria, local, imagem) vêm do cadastro da propria loja.
-                    </p>
+                    <button id="openGastronomyPanelBtn" type="button" class="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors w-fit">Gerenciar selecao</button>
                 </div>
-                <div id="adminGastronomyState" class="ml-auto w-fit rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-600" style="box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;">Carregando lojas...</div>
-                <div id="adminGastronomyList" class="max-h-96 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 space-y-1"></div>
-                <button id="saveGastronomySelectionBtn" type="button" class="px-7 py-3 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors w-fit">Salvar selecao</button>
+                <p class="text-sm text-slate-500 max-w-3xl">
+                    Escolha quais lojas aparecem na seção de gastronomia do site. Clique em Gerenciar selecao para marcar ou desmarcar.
+                </p>
+                <div id="gastronomySelectionPanel" class="hidden space-y-4">
+                    <p class="text-sm text-slate-500 max-w-3xl">
+                        Os dados exibidos no site (nome, categoria, local, imagem) vêm do cadastro da propria loja.
+                    </p>
+                    <div id="adminGastronomyState" class="ml-auto w-fit rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-600" style="box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;">Carregando lojas...</div>
+                    <div id="adminGastronomyList" class="max-h-96 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 space-y-1"></div>
+                    <button id="saveGastronomySelectionBtn" type="button" class="px-7 py-3 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors w-fit">Salvar selecao</button>
+                </div>
             </div>
         </section>
     </main>

@@ -50,7 +50,10 @@ function createAdminRoutes(db, storeService, eventService, gastronomyService) {
     (req, res, next) => {
       uploadImage.single("file")(req, res, (err) => {
         if (err) {
-          const message = err.code === "LIMIT_FILE_SIZE" ? "Imagem acima do limite de 5 MB." : err.message;
+          const message =
+            err.code === "LIMIT_FILE_SIZE"
+              ? "Imagem acima do limite de envio do servidor (25 MB)."
+              : err.message;
           return res.status(400).json({ message });
         }
         return next();
