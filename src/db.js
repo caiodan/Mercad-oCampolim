@@ -1,9 +1,5 @@
-const path = require("path");
-const sqlite3 = require("sqlite3");
-const { open } = require("sqlite");
+const { Pool } = require("pg");
 const bcrypt = require("bcryptjs");
-
-const DB_PATH = path.join(__dirname, "..", "database.sqlite");
 const VISUAL_STORES = [
   {
     name: "Horta do Ze",
@@ -376,6 +372,49 @@ const VISUAL_GASTRONOMY = [
 ];
 
 let dbInstance = null;
+let poolInstance = null;
+
+function mapPlaceholders(sql, params = []) {
+  let index = 0;
+  const text = sql.replace(/\?/g, () => {
+    index += 1;
+    return `$${index}`;
+  });
+  return { text, values: params };
+}
+
+function shouldAppendReturningId(sql) {
+  const normalized = sql.trim().toLowerCase();
+  return normalized.startsWith("insert into") && !normalized.includes("returning");
+}
+
+function createDbAdapter(pool) {
+  return {
+    async all(sql, ...params) {
+      const { text, values } = mapPlaceholders(sql, params);
+      const result = await pool.query(text, values);
+      return result.rows;
+    },
+    async get(sql, ...params) {
+      const { text, values } = mapPlaceholders(sql, params);
+      const result = await pool.query(text, values);
+      return result.rows[0] || null;
+    },
+    async run(sql, ...params) {
+      const mapped = mapPlaceholders(sql, params);
+      const queryText = shouldAppendReturningId(mapped.text) ? `${mapped.text} RETURNING id` : mapped.text;
+      const result = await pool.query(queryText, mapped.values);
+
+      return {
+        lastID: result.rows?.[0]?.id || null,
+        changes: result.rowCount || 0
+      };
+    },
+    async exec(sql) {
+      await pool.query(sql);
+    }
+  };
+}
 
 async function syncVisualCatalog(db) {
   await db.exec("BEGIN TRANSACTION");
@@ -431,22 +470,30 @@ async function syncVisualCatalog(db) {
 
 async function initDb() {
   if (dbInstance) return dbInstance;
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL nao configurada. Defina a string de conexao PostgreSQL.");
+  }
 
-  const db = await open({
-    filename: DB_PATH,
-    driver: sqlite3.Database
+  poolInstance = new Pool({
+    connectionString,
+    ssl: process.env.DB_SSL === "false" ? false : { rejectUnauthorized: false }
   });
+
+  const db = createDbAdapter(poolInstance);
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS admins (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS stores (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       category TEXT NOT NULL,
       floor TEXT NOT NULL,
@@ -456,45 +503,41 @@ async function initDb() {
       whatsapp_url TEXT,
       instagram_url TEXT,
       hours TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       title TEXT NOT NULL,
       event_date TEXT NOT NULL,
       description TEXT NOT NULL,
       image_url TEXT,
       highlight INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS gastronomy_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       cuisine_type TEXT NOT NULL,
       location TEXT NOT NULL,
       description TEXT NOT NULL,
       image_url TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
+      created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
   `);
 
-  async function ensureColumn(table, column, definition) {
-    const columns = await db.all(`PRAGMA table_info(${table})`);
-    const exists = columns.some((item) => item.name === column);
-    if (!exists) {
-      await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-    }
-  }
-
-  await ensureColumn("stores", "whatsapp_url", "TEXT");
-  await ensureColumn("stores", "instagram_url", "TEXT");
-  await ensureColumn("stores", "hours", "TEXT");
-  await ensureColumn("stores", "logo_url", "TEXT");
+  await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS whatsapp_url TEXT");
+  await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS instagram_url TEXT");
+  await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS hours TEXT");
+  await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS logo_url TEXT");
 
   const admin = await db.get("SELECT id FROM admins WHERE email = ?", "admin@mercado.local");
   if (!admin) {
@@ -506,7 +549,13 @@ async function initDb() {
     );
   }
 
-  await syncVisualCatalog(db);
+  const seedOnStartup =
+    process.env.SEED_ON_STARTUP === "true" ||
+    (process.env.SEED_ON_STARTUP !== "false" && process.env.NODE_ENV !== "production");
+
+  if (seedOnStartup) {
+    await syncVisualCatalog(db);
+  }
 
   dbInstance = db;
   return db;
