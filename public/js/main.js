@@ -4,6 +4,7 @@ let gastronomyItems = [];
 const INITIAL_STORE_LIMIT = 12;
 let isShowingAllStores = false;
 let currentStoreFilter = "all";
+let _gastronomyMarqueeRAF = null;
 
 const stateBox = document.getElementById("stateBox");
 const storeGrid = document.getElementById("store-grid");
@@ -296,9 +297,63 @@ function selectHighlightEvent(sortedEvents) {
   return sortedEvents[0];
 }
 
+/**
+ * Animação de marquee baseada em requestAnimationFrame com pixels reais.
+ * Substitui o keyframe CSS `calc(-100% / 3)` que é instável no iOS Safari
+ * quando o elemento possui width:max-content — o browser usa a largura do
+ * container como referência para %, quebrando o loop seamless.
+ *
+ * Estratégia:
+ *  - 3 cópias idênticas no DOM → oneSetWidth = track.scrollWidth / 3
+ *  - Avança position por tempo decorrido (timestamp-based, frame-rate agnóstico)
+ *  - Quando position ≤ -oneSetWidth, reposiciona em 0 (wrap seamless)
+ *  - Respeita document.hidden para não consumir CPU em abas ocultas
+ */
+function startGastronomyMarquee(track) {
+  if (_gastronomyMarqueeRAF !== null) {
+    cancelAnimationFrame(_gastronomyMarqueeRAF);
+    _gastronomyMarqueeRAF = null;
+  }
+
+  track.style.willChange = "transform";
+
+  const DURATION_PER_SET_MS = 7000;
+  let position = 0;
+  let lastTimestamp = null;
+  let oneSetWidth = 0;
+
+  function tick(timestamp) {
+    if (lastTimestamp === null) lastTimestamp = timestamp;
+    const elapsed = Math.min(timestamp - lastTimestamp, 64); // cap a 2 frames para evitar salto em tabs reativadas
+    lastTimestamp = timestamp;
+
+    if (!document.hidden && oneSetWidth > 0) {
+      position -= (oneSetWidth / DURATION_PER_SET_MS) * elapsed;
+      if (position <= -oneSetWidth) {
+        position += oneSetWidth;
+      }
+      track.style.transform = "translateX(" + position.toFixed(3) + "px)";
+    }
+
+    _gastronomyMarqueeRAF = requestAnimationFrame(tick);
+  }
+
+  // Medir após um frame para garantir que o layout já foi calculado
+  requestAnimationFrame(function () {
+    oneSetWidth = track.scrollWidth / 3;
+    _gastronomyMarqueeRAF = requestAnimationFrame(tick);
+  });
+}
+
 function renderGastronomy() {
+  if (_gastronomyMarqueeRAF !== null) {
+    cancelAnimationFrame(_gastronomyMarqueeRAF);
+    _gastronomyMarqueeRAF = null;
+  }
   gastronomyTrack.innerHTML = "";
-  gastronomyTrack.classList.remove("is-marquee", "gastronomy-track--static");
+  gastronomyTrack.style.transform = "";
+  gastronomyTrack.style.willChange = "";
+  gastronomyTrack.classList.remove("gastronomy-track--static");
 
   const uniqueItems = dedupeGastronomyByStoreId(gastronomyItems);
   if (!uniqueItems.length) {
@@ -329,7 +384,7 @@ function renderGastronomy() {
   });
 
   if (useMarquee) {
-    gastronomyTrack.classList.add("is-marquee");
+    startGastronomyMarquee(gastronomyTrack);
   } else {
     gastronomyTrack.classList.add("gastronomy-track--static");
   }
