@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Mercadão Campolim</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --marron: #6d0000;
+            --creme: #fdf8f4;
+        }
+        body { font-family: "Plus Jakarta Sans", sans-serif; background-color: var(--creme); }
+        h1, h2, h3, .font-serif { font-family: "Playfair Display", serif; }
+        .text-marron { color: var(--marron); }
+        .bg-marron { background-color: var(--marron); }
+        .border-marron { border-color: var(--marron); }
+        .store-card {
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+        }
+        .store-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 60px -12px rgba(109, 0, 0, 0.15);
+        }
+        .store-card img { transition: transform 0.8s ease; }
+        .store-card:hover img { transform: scale(1.08); }
+    </style>
+</head>
+<body class="antialiased text-slate-800">
+    <header class="sticky top-0 z-40 bg-[rgba(253,248,244,0.95)] backdrop-blur border-b border-[#e9d9d0]">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-marron text-white grid place-items-center font-bold">M</div>
+                <div>
+                    <p class="text-sm font-semibold leading-none">Mercadão Campolim</p>
+                    <p class="text-[11px] text-slate-500">Painel Administrativo</p>
+                </div>
+            </a>
+            <div class="flex items-center gap-3">
+                <a href="/" class="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors">Voltar ao site</a>
+                <div id="adminUserMenu" class="hidden relative">
+                    <button id="adminUserMenuBtn" type="button" class="w-10 h-10 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 transition-colors grid place-items-center" title="Conta do administrador">
+                        <i data-lucide="user" class="w-5 h-5"></i>
+                    </button>
+                    <div id="adminUserDropdown" class="hidden absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-lg p-3">
+                        <p id="adminUserEmail" class="text-xs text-slate-500 mb-3 truncate">admin@mercado.local</p>
+                        <button id="headerLogoutBtn" type="button" class="w-full px-4 py-2 rounded-full bg-red-700 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-red-800 transition-colors">Deslogar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-10 space-y-8">
+        <section class="bg-white border border-[#eddcd2] rounded-[2rem] p-8 md:p-10 shadow-sm">
+            <p class="text-[10px] uppercase tracking-[0.3em] text-amber-700 font-bold">Área Restrita</p>
+            <h1 class="text-4xl md:text-5xl italic mt-3 text-slate-900">Gestão de Conteudo</h1>
+            <p class="mt-4 text-slate-500 max-w-3xl">
+                Apenas administradores autenticados podem cadastrar, editar ou remover lojas e eventos da vitrine.
+                A area publica permanece somente para visualizacao.
+            </p>
+        </section>
+
+        <section id="loginSection" class="bg-white border border-[#eddcd2] rounded-[2rem] p-8 md:p-10 shadow-sm">
+                <h2 class="text-3xl italic text-slate-900">Login do Administrador</h2>
+            <p class="text-slate-500 mt-2">Use suas credenciais para liberar as ações de cadastro e edição.</p>
+            <form id="loginForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <label class="text-sm font-semibold text-slate-600">
+                    Email
+                    <input type="email" name="email" required placeholder="admin@mercado.local" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                </label>
+                <label class="text-sm font-semibold text-slate-600">
+                    Senha
+                    <input type="password" name="password" required placeholder="********" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                </label>
+                <div class="md:col-span-2">
+                    <button type="submit" class="px-7 py-3 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors">Entrar no painel</button>
+                </div>
+            </form>
+        </section>
+
+        <section id="panelSection" class="hidden bg-white border border-[#eddcd2] rounded-[2rem] p-8 md:p-10 shadow-sm space-y-10">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <h2 class="text-3xl italic text-slate-900">Gerenciar Lojas</h2>
+                <div class="flex items-center gap-2">
+                    <button id="openStoreFormBtn" type="button" class="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors">Adicionar loja</button>
+                </div>
+            </div>
+
+            <form id="storeForm" class="hidden grid-cols-1 md:grid-cols-2 gap-4">
+                <input type="hidden" name="id">
+                <label class="text-sm font-semibold text-slate-600">
+                    Nome da loja
+                    <input type="text" name="name" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                </label>
+                <label class="text-sm font-semibold text-slate-600">
+                    Categoria
+                    <select name="category" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                        <option value="">Selecione uma categoria</option>
+                        <option value="hortifruti">Hortifruti</option>
+                        <option value="gastronomia">Gastronomia</option>
+                        <option value="bebidas">Adega</option>
+                        <option value="servicos">Serviços</option>
+                        <option value="cafeteria">Cafeteria</option>
+                        <option value="doces">Doces e Sobremesas</option>
+                        <option value="padaria">Padaria e Confeitaria</option>
+                        <option value="acougue">Açougue</option>
+                        <option value="peixaria">Peixaria</option>
+                        <option value="emporio">Empório</option>
+                        <option value="queijaria">Queijaria</option>
+                        <option value="vinhos">Vinhos e Destilados</option>
+                        <option value="cervejaria">Cervejaria</option>
+                        <option value="restaurante">Restaurante</option>
+                        <option value="lanches">Lanches</option>
+                        <option value="saudavel">Saudável</option>
+                        <option value="floricultura">Floricultura</option>
+                        <option value="artesanato">Artesanato</option>
+                        <option value="presentes">Presentes</option>
+                    </select>
+                </label>
+                <label class="text-sm font-semibold text-slate-600">
+                    Piso / Localização
+                    <input type="text" name="floor" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                </label>
+                <label class="text-sm font-semibold text-slate-600">
+                    Abre às
+                    <input type="time" name="openTime" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                </label>
+                <label class="text-sm font-semibold text-slate-600">
+                    Fecha às
+                    <input type="time" name="closeTime" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                </label>
+                <label class="text-sm font-semibold text-slate-600 md:col-span-2">
+                    Descrição
+                    <textarea name="description" rows="4" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"></textarea>
+                </label>
+                <label class="text-sm font-semibold text-slate-600 md:col-span-2">
+                    URL da imagem (opcional)
+                    <input type="url" name="imageUrl" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                </label>
+                <label class="text-sm font-semibold text-slate-600 md:col-span-2">
+                    URL da logo (opcional)
+                    <input type="url" name="logoUrl" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                </label>
+                <label class="text-sm font-semibold text-slate-600">
+                    Link do WhatsApp (opcional)
+                    <input type="url" name="whatsappUrl" placeholder="https://wa.me/5515..." class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                </label>
+                <label class="text-sm font-semibold text-slate-600">
+                    Link do Instagram (opcional)
+                    <input type="url" name="instagramUrl" placeholder="https://instagram.com/..." class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                </label>
+                <div class="md:col-span-2 flex flex-wrap gap-3">
+                    <button type="submit" class="px-7 py-3 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors">Salvar loja</button>
+                    <button id="cancelEditBtn" type="button" class="hidden px-5 py-3 rounded-full text-xs font-bold uppercase tracking-widest border border-slate-300 hover:bg-slate-100 transition-colors">Cancelar edição</button>
+                </div>
+            </form>
+
+            <div id="adminState" class="ml-auto w-fit rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-600" style="box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;">Carregando lojas...</div>
+            <div id="adminStoresGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-8"></div>
+
+            <div class="border-t border-[#eddcd2] pt-8 space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <h2 class="text-3xl italic text-slate-900">Gerenciar Eventos</h2>
+                    <button id="openEventFormBtn" type="button" class="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors w-fit">Adicionar evento</button>
+                </div>
+                <div id="adminEventsState" class="ml-auto w-fit rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-600" style="box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;">Carregando eventos...</div>
+                <form id="eventForm" class="hidden grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" name="id">
+                    <label class="text-sm font-semibold text-slate-600">
+                        Titulo do evento
+                        <input type="text" name="title" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </label>
+                    <label class="text-sm font-semibold text-slate-600">
+                        Data (texto)
+                        <input type="text" name="eventDate" required placeholder="12 de Maio" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </label>
+                    <label class="text-sm font-semibold text-slate-600 md:col-span-2">
+                        Descricao
+                        <textarea name="description" rows="4" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"></textarea>
+                    </label>
+                    <label class="text-sm font-semibold text-slate-600 md:col-span-2">
+                        URL da imagem (opcional)
+                        <input type="url" name="imageUrl" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </label>
+                    <label class="text-sm font-semibold text-slate-600 md:col-span-2 flex items-center gap-3">
+                        <input type="checkbox" name="highlight" class="w-4 h-4 rounded border-slate-300">
+                        Evento em destaque
+                    </label>
+                    <div class="md:col-span-2 flex flex-wrap gap-3">
+                        <button type="submit" class="px-7 py-3 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors">Salvar evento</button>
+                        <button id="cancelEventEditBtn" type="button" class="hidden px-5 py-3 rounded-full text-xs font-bold uppercase tracking-widest border border-slate-300 hover:bg-slate-100 transition-colors">Cancelar edicao</button>
+                    </div>
+                </form>
+                <div id="adminEventsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+            </div>
+
+            <div class="border-t border-[#eddcd2] pt-8 space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <h2 class="text-3xl italic text-slate-900">Gerenciar Gastronomia</h2>
+                    <button id="openGastronomyFormBtn" type="button" class="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors w-fit">Adicionar item</button>
+                </div>
+                <div id="adminGastronomyState" class="ml-auto w-fit rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-600" style="box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;">Carregando gastronomia...</div>
+                <form id="gastronomyForm" class="hidden grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" name="id">
+                    <label class="text-sm font-semibold text-slate-600">
+                        Nome
+                        <input type="text" name="name" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </label>
+                    <label class="text-sm font-semibold text-slate-600">
+                        Tipo de cozinha
+                        <input type="text" name="cuisineType" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </label>
+                    <label class="text-sm font-semibold text-slate-600 md:col-span-2">
+                        Localizacao
+                        <input type="text" name="location" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </label>
+                    <label class="text-sm font-semibold text-slate-600 md:col-span-2">
+                        Descricao
+                        <textarea name="description" rows="4" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"></textarea>
+                    </label>
+                    <label class="text-sm font-semibold text-slate-600 md:col-span-2">
+                        URL da imagem (opcional)
+                        <input type="url" name="imageUrl" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </label>
+                    <div class="md:col-span-2 flex flex-wrap gap-3">
+                        <button type="submit" class="px-7 py-3 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors">Salvar item</button>
+                        <button id="cancelGastronomyEditBtn" type="button" class="hidden px-5 py-3 rounded-full text-xs font-bold uppercase tracking-widest border border-slate-300 hover:bg-slate-100 transition-colors">Cancelar edicao</button>
+                    </div>
+                </form>
+                <div id="adminGastronomyGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="/js/admin.js"></script>
+</body>
+</html>

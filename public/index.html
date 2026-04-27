@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercadão Campolim | Vitrine e Eventos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --marron: #6d0000;
+            --creme: #fdf8f4;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--creme);
+            color: #2d2d2d;
+            scroll-behavior: smooth;
+        }
+        .section-enter {
+            opacity: 0;
+            transform: translateY(22px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+            will-change: opacity, transform;
+        }
+        .section-enter.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        h1, h2, h3, h4, .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+        .nav-link { transition: all 0.3s ease; }
+        .nav-scrolled {
+            background: rgba(253, 248, 244, 0.98);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 4px 30px rgba(109, 0, 0, 0.05);
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+        .nav-scrolled .text-logo { color: var(--marron); }
+        .nav-scrolled .nav-link { color: #64748b; }
+        .nav-scrolled .nav-link:hover { color: var(--marron); }
+        .nav-brand-logo {
+            height: 2.875rem;
+            width: auto;
+            max-width: min(248px, 46vw);
+            object-fit: contain;
+            object-position: left center;
+            display: block;
+        }
+        @media (min-width: 1024px) {
+            .nav-brand-logo {
+                height: 3rem;
+                max-width: 288px;
+            }
+        }
+        .hero-overlay {
+            background: linear-gradient(to bottom, rgba(109, 0, 0, 0.55), rgba(109, 0, 0, 0.78)), url('/images/hero-bg.png');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        .store-card {
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+        }
+        .store-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 60px -12px rgba(109, 0, 0, 0.15);
+        }
+        .store-card.store-card-enter {
+            opacity: 0;
+            transform: translateY(14px) scale(0.985);
+            animation: store-card-in 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation-delay: var(--store-enter-delay, 0ms);
+        }
+        @keyframes store-card-in {
+            from {
+                opacity: 0;
+                transform: translateY(14px) scale(0.985);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .store-card img { transition: transform 0.8s ease; }
+        .store-card:hover img { transform: scale(1.08); }
+        @media (prefers-reduced-motion: reduce) {
+            .store-card.store-card-enter {
+                animation: none;
+                opacity: 1;
+                transform: none;
+            }
+        }
+        #store-modal {
+            display: flex;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        #store-modal.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        #store-modal .modal-content {
+            position: relative;
+            z-index: 1;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        #event-modal {
+            display: flex;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        #event-modal.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        #event-modal .modal-content {
+            position: relative;
+            z-index: 1;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .bg-marron { background-color: var(--marron); }
+        .text-marron { color: var(--marron); }
+        .border-marron { border-color: var(--marron); }
+        .border-white-alpha { border-color: rgba(255, 255, 255, 0.2); }
+        .border-marron-alpha { border-color: rgba(109, 0, 0, 0.1); }
+        .event-card-large { height: 100%; min-height: 500px; }
+        .map-container {
+            filter: grayscale(0.2) contrast(1.1);
+            border-radius: 2.5rem;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(109, 0, 0, 0.1);
+        }
+        .filter-btn {
+            color: var(--marron);
+            border-color: var(--marron);
+        }
+        .filter-btn:hover,
+        .filter-btn.active {
+            background-color: var(--marron);
+            color: #fff;
+        }
+        #toggle-stores-btn:hover,
+        #toggle-stores-btn:focus-visible {
+            background-color: var(--marron);
+            color: #fff;
+            border-color: var(--marron);
+        }
+        .hero-cta:hover {
+            background-color: #fff;
+            color: var(--marron);
+        }
+        .gastronomy-carousel {
+            position: relative;
+            width: 100%;
+            min-height: 520px;
+            overflow: hidden;
+            border-radius: 0;
+            box-shadow: 0 20px 50px rgba(109, 0, 0, 0.12);
+        }
+        .gastronomy-track {
+            display: flex;
+            width: max-content;
+            gap: 4px;
+            will-change: transform;
+        }
+        .gastronomy-track.is-marquee {
+            animation: gastronomy-marquee 45s linear infinite;
+        }
+        .gastronomy-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 0;
+            overflow: hidden;
+            min-height: 520px;
+            border: none;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+            display: flex;
+            flex-direction: column;
+            flex: 0 0 clamp(260px, 20vw, 330px);
+        }
+        .gastronomy-card-image {
+            height: 400px;
+            width: 100%;
+            object-fit: cover;
+        }
+        .gastronomy-card-body {
+            padding: 0.55rem 0.75rem 0.7rem;
+        }
+        .gastronomy-section-bg {
+            background-image:
+                linear-gradient(to bottom, rgba(109, 0, 0, 0.9), rgba(109, 0, 0, 0.85)),
+                url("https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&q=80&w=1920");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        @keyframes gastronomy-marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(calc(-50% - 2px)); }
+        }
+        @media (max-width: 768px) {
+            .gastronomy-card {
+                min-height: 420px;
+                flex-basis: 190px;
+            }
+            .gastronomy-card-image {
+                height: 320px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <nav id="main-nav" class="fixed w-full z-40 transition-all duration-500 py-8 box-shadow">
+        <div class="max-w-7xl mx-auto px-8 flex justify-between items-center">
+            <a href="#home" class="flex items-center gap-4 shrink-0">
+                <div id="logo-wrapper" class="flex items-center justify-center border-x border-white-alpha px-4 md:px-6 py-0">
+                    <img src="/images/mercadao-campolim-logo.png" alt="Mercadão Campolim — Gastronomia e variedades" width="260" height="80" class="nav-brand-logo" loading="eager" decoding="async">
+                </div>
+            </a>
+            <div class="hidden lg:flex items-center gap-10 text-[11px] font-bold uppercase tracking-[0.2em] text-white/80">
+                <a href="#vitrine" class="nav-link hover:text-white transition-colors">Lojas & Bancas</a>
+                <a href="#gastronomia" class="nav-link hover:text-white transition-colors">Gastronomia</a>
+                <a href="#eventos" class="nav-link hover:text-white transition-colors">Eventos</a>
+                <a href="#localizacao" class="nav-link hover:text-white transition-colors">Localização</a>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="#localizacao" id="nav-action-btn" class="bg-white text-marron px-6 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-amber-400 transition-all shadow-lg text-center">
+                    Como Chegar
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <section id="home" class="section-enter relative min-h-screen flex items-center justify-center text-center hero-overlay px-8 py-24">
+        <div style="padding-top: 50px;" class="max-w-4xl space-y-12 animate-in fade-in duration-1000">
+            <div class="flex items-center justify-center gap-4 text-amber-400">
+                <div class="w-12 h-[1px] bg-amber-400"></div>
+                <span class="text-xs font-bold uppercase tracking-[0.3em] italic text-amber-100">Desde 2009</span>
+                <div class="w-12 h-[1px] bg-amber-400"></div>
+            </div>
+            <div class="space-y-6 mt-8">
+                <h1 class="text-6xl md:text-8xl font-normal text-white leading-[1.1]">
+                    Explore o melhor do <span class="italic font-serif text-white">Mercadão.</span>
+                </h1>
+                <p class="text-white/80 text-xl max-w-2xl mx-auto leading-relaxed font-light">
+                    Descubra uma curadoria exclusiva de sabores, aromas e experiências no mercado mais tradicional da cidade.
+                </p>
+            </div>
+            <div class="pt-16">
+                <a href="#vitrine" class="hero-cta inline-flex items-center gap-4 bg-amber-500 text-white px-12 py-6 rounded-full font-bold text-xs uppercase tracking-[0.2em] hover:bg-white transition-all shadow-2xl">
+                    Conhecer a Vitrine <i data-lucide="chevron-down" class="w-5 h-5"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="vitrine" class="section-enter py-32 px-8 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col items-center mb-20 space-y-6 text-center">
+                <h2 class="text-5xl font-normal italic">As Nossas <span class="text-marron">Lojas</span></h2>
+                <div class="w-20 h-[2px] bg-marron-alpha"></div>
+                <div class="flex flex-wrap justify-center gap-3 mt-4" id="category-filters"></div>
+            </div>
+            <div id="stateBox" class="mb-6 text-sm text-slate-500 text-center">Carregando lojas...</div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-8" id="store-grid"></div>
+            <div class="mt-10 text-center">
+                <button id="toggle-stores-btn" type="button" class="hidden inline-flex items-center gap-2 px-7 py-3 rounded-full border border-marron text-marron text-[10px] font-bold uppercase tracking-widest transition-colors duration-200">
+                    Ver todas as lojas
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section id="gastronomia" class="section-enter py-32 bg-marron gastronomy-section-bg">
+        <div class="max-w-7xl mx-auto px-8">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
+                <div class="space-y-4">
+                    <span class="text-amber-200 font-bold uppercase text-[10px] tracking-[0.3em]">Sabores do Mercadão</span>
+                    <h2 class="text-5xl font-normal italic leading-tight text-white">Nossa <span class="text-amber-300">Gastronomia</span></h2>
+                    <p class="text-white/80 text-lg max-w-2xl font-light">Uma seleção especial de restaurantes e experiências para almoço, jantar e encontros no Mercadão Campolim.</p>
+                </div>
+            </div>
+        </div>
+        <div id="gastronomy-state" class="mb-6 text-sm text-white/80 text-center px-8">Carregando gastronomia...</div>
+        <div>
+            <div id="gastronomy-carousel" class="gastronomy-carousel">
+                <div id="gastronomy-track" class="gastronomy-track"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="eventos" class="section-enter py-32 px-8 bg-[#faf5f0]">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
+                <div class="space-y-4">
+                    <span class="text-amber-600 font-bold uppercase text-[10px] tracking-[0.3em]">Agenda Cultural</span>
+                    <h2 class="text-5xl font-normal italic leading-tight text-slate-900">Eventos & <span class="text-marron">Experiências</span></h2>
+                </div>
+                <button id="open-calendar-btn" type="button" class="text-marron font-bold text-xs uppercase tracking-widest border-b-2 border-marron pb-1 hover:text-black hover:border-black transition-all">Calendário Completo</button>
+            </div>
+            <div id="event-state" class="mb-6 text-sm text-slate-500">Carregando eventos...</div>
+            <div id="events-preview" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <div class="lg:col-span-7" id="event-highlight"></div>
+                <div class="lg:col-span-5 flex flex-col gap-8" id="event-list"></div>
+            </div>
+            <div id="events-calendar-view" class="hidden space-y-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-3xl font-normal italic text-slate-900">Calendário Completo</h3>
+                    <button id="back-to-events-btn" type="button" class="px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-slate-300 hover:bg-slate-100 transition-colors">Voltar</button>
+                </div>
+                <div id="full-calendar-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="localizacao" class="section-enter py-32 px-8 bg-white overflow-hidden">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+            <div class="space-y-12">
+                <div class="space-y-4">
+                    <span class="text-amber-600 font-bold uppercase text-[10px] tracking-[0.3em]">Visite-nos</span>
+                    <h2 class="text-5xl font-normal italic leading-tight text-slate-900">Onde a <span class="text-marron">Tradição</span> se Encontra</h2>
+                    <p class="text-slate-500 text-lg leading-relaxed max-w-md">No coração do Campolim, oferecemos um espaço de requinte e fácil acesso para o seu dia a dia.</p>
+                </div>
+                <div class="space-y-8">
+                    <div class="flex items-start gap-6 group">
+                        <div class="w-12 h-12 bg-marron-alpha rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-marron transition-colors">
+                            <i data-lucide="map-pin" class="text-marron group-hover:text-white w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h5 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-1">Endereço</h5>
+                            <p class="text-xl font-serif italic text-slate-900 leading-snug">Rua Antônio Perez Hernandez, 125<br>Campolim, Sorocaba — SP</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-6 group">
+                        <div class="w-12 h-12 bg-marron-alpha rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-marron transition-colors">
+                            <i data-lucide="phone" class="text-marron group-hover:text-white w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h5 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-1">Contato</h5>
+                            <p class="text-xl font-serif italic text-slate-900 leading-snug">+55 (15) 3000-0000</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-6 group">
+                        <div class="w-12 h-12 bg-marron-alpha rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-marron transition-colors">
+                            <i data-lucide="clock-3" class="text-marron group-hover:text-white w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h5 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-1">Horário de Funcionamento</h5>
+                            <p class="text-xl font-serif italic text-slate-900 leading-snug">Segunda a Sábado: 08:00 às 22:00<br>Domingos e Feriados: 09:00 às 20:00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="map-container relative aspect-square lg:aspect-auto lg:h-[500px] self-center">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3657.481523490796!2d-47.4789501!3d-23.551325!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94cf5f958804c843%3A0x6e9f29881881775f!2sR.%20Ant%C3%B4nio%20Perez%20Hernandez%2C%20125%20-%20Parque%20Campolim%2C%20Sorocaba%20-%20SP%2C%2018048-115!5e0!3m2!1spt-BR!2sbr!4v1714100000000!5m2!1spt-BR!2sbr" width="100%" height="100%" style="border:0;" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <div class="absolute inset-0 pointer-events-none ring-1 ring-marron-alpha rounded-[2.5rem]"></div>
+            </div>
+        </div>
+    </section>
+
+    <div id="store-modal" class="fixed inset-0 z-[60] items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div class="modal-content bg-white w-full max-w-3xl rounded-[2.5rem] overflow-hidden shadow-2xl relative">
+            <button id="close-modal" class="absolute top-6 right-6 z-10 bg-black/5 p-3 rounded-full hover:bg-marron hover:text-white transition-all">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="flex flex-col md:flex-row min-h-[450px]">
+                <div class="md:w-[45%] h-64 md:h-auto overflow-hidden">
+                    <img id="modal-img" src="" class="w-full h-full object-cover" alt="Imagem da loja">
+                </div>
+                <div class="md:w-[55%] p-12 space-y-8 flex flex-col justify-center">
+                    <div>
+                        <span id="modal-cat" class="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600">Categoria</span>
+                        <h3 id="modal-title" class="text-4xl font-serif italic text-slate-900 mt-3 leading-tight">Nome da Loja</h3>
+                    </div>
+                    <p id="modal-desc" class="text-slate-500 text-base leading-relaxed font-light">Descrição...</p>
+                    <div class="grid grid-cols-2 gap-6 pt-6 border-t border-slate-100">
+                        <div class="space-y-1">
+                            <p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Onde</p>
+                            <p id="modal-loc" class="text-sm font-bold text-slate-800">Ala Sul</p>
+                        </div>
+                        <div class="space-y-1">
+                            <p class="text-[10px] uppercase font-bold text-slate-400 tracking-widest">Horário</p>
+                            <p id="modal-hours" class="text-sm font-bold text-slate-800">10:00 — 22:00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="event-modal" class="fixed inset-0 z-[60] items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div class="modal-content bg-white w-full max-w-3xl rounded-[2.5rem] overflow-hidden shadow-2xl relative">
+            <button id="close-event-modal" class="absolute top-6 right-6 z-10 bg-black/5 p-3 rounded-full hover:bg-marron hover:text-white transition-all">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+            <div class="flex flex-col md:flex-row min-h-[450px]">
+                <div class="md:w-[45%] h-64 md:h-auto overflow-hidden">
+                    <img id="event-modal-img" src="" class="w-full h-full object-cover" alt="Imagem do evento">
+                </div>
+                <div class="md:w-[55%] p-12 space-y-8 flex flex-col justify-center">
+                    <div>
+                        <span id="event-modal-date" class="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600">Data</span>
+                        <h3 id="event-modal-title" class="text-4xl font-serif italic text-slate-900 mt-3 leading-tight">Nome do Evento</h3>
+                    </div>
+                    <p id="event-modal-desc" class="text-slate-500 text-base leading-relaxed font-light">Descrição do evento...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="py-16 bg-slate-900 text-center">
+        <div class="max-w-7xl mx-auto px-8">
+            <div class="flex flex-col items-center space-y-6">
+                <div class="flex flex-col items-center">
+                    <span class="text-2xl font-bold tracking-tighter text-white leading-none">MERCADÃO</span>
+                    <span class="text-[9px] font-bold tracking-[0.3em] text-amber-500 uppercase">Campolim</span>
+                </div>
+                <div class="flex gap-8 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-8">
+                    <a href="#vitrine" class="hover:text-white">Lojas</a>
+                    <a href="#gastronomia" class="hover:text-white">Gastronomia</a>
+                    <a href="#eventos" class="hover:text-white">Eventos</a>
+                    <a href="#localizacao" class="hover:text-white">Localização</a>
+                </div>
+                <p class="text-slate-600 text-xs font-bold uppercase tracking-widest pt-8 border-t border-white/5 w-full">© 2026 Tradição e Excelência em Sorocaba</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/main.js"></script>
+</body>
+</html>
