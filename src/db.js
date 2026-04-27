@@ -421,9 +421,10 @@ async function syncVisualCatalog(db) {
   try {
     await db.run("DELETE FROM stores");
     for (const store of VISUAL_STORES) {
+      const inGastro = store.category === "gastronomia" ? 1 : 0;
       await db.run(
-        `INSERT INTO stores (name, category, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        `INSERT INTO stores (name, category, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, show_in_gastronomy, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         store.name,
         store.category,
         store.floor,
@@ -432,7 +433,8 @@ async function syncVisualCatalog(db) {
         store.logo_url || null,
         store.whatsapp_url || null,
         store.instagram_url || null,
-        store.hours || "10:00 - 22:00"
+        store.hours || "10:00 - 22:00",
+        inGastro
       );
     }
 
@@ -449,18 +451,6 @@ async function syncVisualCatalog(db) {
       );
     }
 
-    await db.run("DELETE FROM gastronomy_items");
-    for (const item of VISUAL_GASTRONOMY) {
-      await db.run(
-        `INSERT INTO gastronomy_items (name, cuisine_type, location, description, image_url, updated_at)
-         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        item.name,
-        item.cuisine_type,
-        item.location,
-        item.description,
-        item.image_url
-      );
-    }
     await db.exec("COMMIT");
   } catch (error) {
     await db.exec("ROLLBACK");
@@ -503,6 +493,7 @@ async function initDb() {
       whatsapp_url TEXT,
       instagram_url TEXT,
       hours TEXT,
+      show_in_gastronomy INTEGER DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     )
@@ -538,6 +529,7 @@ async function initDb() {
   await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS instagram_url TEXT");
   await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS hours TEXT");
   await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS logo_url TEXT");
+  await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS show_in_gastronomy INTEGER DEFAULT 0");
 
   const admin = await db.get("SELECT id FROM admins WHERE email = ?", "admin@mercado.local");
   if (!admin) {

@@ -1,6 +1,8 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const { authAdmin, createToken } = require("../middleware/auth");
+const { uploadImage } = require("../middleware/uploadImage");
+const { saveUploadedImage } = require("../services/imageStorage.service");
 
 function createAdminRoutes(db, storeService, eventService, gastronomyService) {
   const router = express.Router();
@@ -41,6 +43,36 @@ function createAdminRoutes(db, storeService, eventService, gastronomyService) {
       }
     });
   });
+
+  router.post(
+    "/uploads/image",
+    authAdmin,
+    (req, res, next) => {
+      uploadImage.single("file")(req, res, (err) => {
+        if (err) {
+          const message = err.code === "LIMIT_FILE_SIZE" ? "Imagem acima do limite de 5 MB." : err.message;
+          return res.status(400).json({ message });
+        }
+        return next();
+      });
+    },
+    async (req, res) => {
+      try {
+        if (!req.file || !req.file.buffer) {
+          return res.status(400).json({ message: "Arquivo ausente. Envie o campo multipart \"file\"." });
+        }
+        const { url, storage } = await saveUploadedImage(
+          req.file.buffer,
+          req.file.originalname,
+          req.file.mimetype
+        );
+        return res.status(201).json({ url, storage });
+      } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: error.message || "Erro ao processar upload." });
+      }
+    }
+  );
 
   router.get("/stores", authAdmin, async (_req, res) => {
     try {
@@ -118,41 +150,16 @@ function createAdminRoutes(db, storeService, eventService, gastronomyService) {
     }
   });
 
-  router.get("/gastronomy", authAdmin, async (_req, res) => {
+  router.put("/gastronomy/selection", authAdmin, async (req, res) => {
     try {
-      const items = await gastronomyService.listItems();
-      return res.json(items);
-    } catch (error) {
-      return res.status(500).json({ message: "Erro ao listar gastronomia." });
-    }
-  });
-
-  router.post("/gastronomy", authAdmin, async (req, res) => {
-    try {
-      const created = await gastronomyService.createItem(req.body);
-      return res.status(201).json(created);
-    } catch (error) {
-      return res.status(400).json({ message: error.message || "Erro ao criar item de gastronomia." });
-    }
-  });
-
-  router.put("/gastronomy/:id", authAdmin, async (req, res) => {
-    try {
-      const updated = await gastronomyService.updateItem(Number(req.params.id), req.body);
-      return res.json(updated);
-    } catch (error) {
-      const status = error.message === "Item de gastronomia nao encontrado." ? 404 : 400;
-      return res.status(status).json({ message: error.message || "Erro ao atualizar item de gastronomia." });
-    }
-  });
-
-  router.delete("/gastronomy/:id", authAdmin, async (req, res) => {
-    try {
-      await gastronomyService.deleteItem(Number(req.params.id));
+      const { storeIds } = req.body || {};
+      if (!Array.isArray(storeIds)) {
+        return res.status(400).json({ message: "Envie storeIds como array de ids de lojas." });
+      }
+      await gastronomyService.setGastronomyStoreSelection(storeIds);
       return res.status(204).send();
     } catch (error) {
-      const status = error.message === "Item de gastronomia nao encontrado." ? 404 : 400;
-      return res.status(status).json({ message: error.message || "Erro ao remover item de gastronomia." });
+      return res.status(500).json({ message: error.message || "Erro ao salvar selecao de gastronomia." });
     }
   });
 

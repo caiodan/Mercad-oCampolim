@@ -12,9 +12,10 @@ class StoreRepository {
   }
 
   async createStore(payload) {
+    const inGastro = payload.showInGastronomy ? 1 : 0;
     const result = await this.db.run(
-      `INSERT INTO stores (name, category, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      `INSERT INTO stores (name, category, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, show_in_gastronomy, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       payload.name,
       payload.category,
       payload.floor,
@@ -23,15 +24,17 @@ class StoreRepository {
       payload.logoUrl || null,
       payload.whatsappUrl || null,
       payload.instagramUrl || null,
-      payload.hours || "10:00 - 22:00"
+      payload.hours || "10:00 - 22:00",
+      inGastro
     );
     return this.getStoreById(result.lastID);
   }
 
   async updateStore(id, payload) {
+    const inGastro = payload.showInGastronomy ? 1 : 0;
     await this.db.run(
       `UPDATE stores
-       SET name = ?, category = ?, floor = ?, description = ?, image_url = ?, logo_url = ?, whatsapp_url = ?, instagram_url = ?, hours = ?, updated_at = CURRENT_TIMESTAMP
+       SET name = ?, category = ?, floor = ?, description = ?, image_url = ?, logo_url = ?, whatsapp_url = ?, instagram_url = ?, hours = ?, show_in_gastronomy = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
       payload.name,
       payload.category,
@@ -42,6 +45,7 @@ class StoreRepository {
       payload.whatsappUrl || null,
       payload.instagramUrl || null,
       payload.hours || "10:00 - 22:00",
+      inGastro,
       id
     );
     return this.getStoreById(id);

@@ -11,11 +11,9 @@ const adminEventsGrid = document.getElementById("adminEventsGrid");
 const adminEventsState = document.getElementById("adminEventsState");
 const cancelEventEditBtn = document.getElementById("cancelEventEditBtn");
 const openEventFormBtn = document.getElementById("openEventFormBtn");
-const gastronomyForm = document.getElementById("gastronomyForm");
-const adminGastronomyGrid = document.getElementById("adminGastronomyGrid");
+const adminGastronomyList = document.getElementById("adminGastronomyList");
 const adminGastronomyState = document.getElementById("adminGastronomyState");
-const cancelGastronomyEditBtn = document.getElementById("cancelGastronomyEditBtn");
-const openGastronomyFormBtn = document.getElementById("openGastronomyFormBtn");
+const saveGastronomySelectionBtn = document.getElementById("saveGastronomySelectionBtn");
 const adminUserMenu = document.getElementById("adminUserMenu");
 const adminUserMenuBtn = document.getElementById("adminUserMenuBtn");
 const adminUserDropdown = document.getElementById("adminUserDropdown");
@@ -52,13 +50,6 @@ function resetEventForm() {
   closeEventForm();
 }
 
-function resetGastronomyForm() {
-  gastronomyForm.reset();
-  gastronomyForm.elements.id.value = "";
-  cancelGastronomyEditBtn.classList.add("hidden");
-  closeGastronomyForm();
-}
-
 function openStoreForm() {
   storeForm.classList.remove("hidden");
   storeForm.classList.add("grid");
@@ -71,12 +62,6 @@ function openEventForm() {
   openEventFormBtn.textContent = "Fechar";
 }
 
-function openGastronomyForm() {
-  gastronomyForm.classList.remove("hidden");
-  gastronomyForm.classList.add("grid");
-  openGastronomyFormBtn.textContent = "Fechar";
-}
-
 function closeStoreForm() {
   storeForm.classList.add("hidden");
   storeForm.classList.remove("grid");
@@ -87,12 +72,6 @@ function closeEventForm() {
   eventForm.classList.add("hidden");
   eventForm.classList.remove("grid");
   openEventFormBtn.textContent = "Adicionar evento";
-}
-
-function closeGastronomyForm() {
-  gastronomyForm.classList.add("hidden");
-  gastronomyForm.classList.remove("grid");
-  openGastronomyFormBtn.textContent = "Adicionar item";
 }
 
 function setAdminMessage(message, type = "default") {
@@ -209,6 +188,7 @@ function createAdminCard(store) {
       try {
         await apiRequest(`/api/admin/stores/${store.id}`, { method: "DELETE" });
         await loadAdminStores();
+        await loadGastronomySelection();
         setAdminMessage("Loja removida com sucesso.", "success");
       } catch (error) {
         setAdminMessage(error.message || "Erro ao remover loja.", "error");
@@ -271,51 +251,28 @@ function createAdminEventCard(event) {
   return card;
 }
 
-function createAdminGastronomyCard(item) {
-  const card = document.createElement("article");
-  card.className = "rounded-[1.5rem] overflow-hidden bg-white border border-[#eddcd2] shadow-sm h-full flex flex-col";
-  card.innerHTML = `
-    <div class="h-52 overflow-hidden">
-      <img src="${item.image_url || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200"}" class="w-full h-full object-cover" alt="${item.name}">
-    </div>
-    <div class="p-6 flex-1 flex flex-col">
-      <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">${item.cuisine_type}</span>
-      <h4 class="mt-3 text-2xl font-serif italic text-slate-900 leading-tight">${item.name}</h4>
-      <p class="mt-3 text-sm text-slate-500 leading-relaxed">${item.description}</p>
-      <p class="mt-4 text-xs font-semibold uppercase tracking-widest text-slate-400">${item.location}</p>
-      <div class="mt-auto pt-4 flex justify-end gap-2" data-gastronomy-actions></div>
-    </div>
-  `;
-
-  const actions = card.querySelector("[data-gastronomy-actions]");
-  const editButton = createActionButton(
-    "Editar",
-    "px-4 py-2 rounded-full border border-slate-300 bg-white text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-100 transition-colors",
-    () => {
-      openGastronomyForm();
-      gastronomyForm.elements.id.value = String(item.id);
-      gastronomyForm.elements.name.value = item.name;
-      gastronomyForm.elements.cuisineType.value = item.cuisine_type;
-      gastronomyForm.elements.location.value = item.location;
-      gastronomyForm.elements.description.value = item.description;
-      gastronomyForm.elements.imageUrl.value = item.image_url || "";
-      cancelGastronomyEditBtn.classList.remove("hidden");
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  );
-  const deleteButton = createActionButton(
-    "Excluir",
-    "px-4 py-2 rounded-full bg-red-700 text-white text-[10px] font-bold uppercase tracking-widest hover:bg-red-800 transition-colors",
-    async () => {
-      if (!confirm(`Excluir o item "${item.name}"?`)) return;
-      await apiRequest(`/api/admin/gastronomy/${item.id}`, { method: "DELETE" });
-      await loadAdminGastronomy();
-      setGastronomyMessage("Item removido com sucesso.");
-    }
-  );
-
-  actions.append(editButton, deleteButton);
-  return card;
+function renderGastronomyStoreRow(store) {
+  const label = document.createElement("label");
+  label.className =
+    "flex items-start gap-3 py-2.5 px-3 rounded-xl hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-100";
+  const cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.name = "gastro_store";
+  cb.value = String(store.id);
+  cb.checked = Number(store.show_in_gastronomy) === 1;
+  cb.className = "mt-1 shrink-0";
+  const wrap = document.createElement("div");
+  const title = document.createElement("span");
+  title.className = "block text-sm font-semibold text-slate-800";
+  title.textContent = store.name || "";
+  const sub = document.createElement("span");
+  sub.className = "block text-[11px] text-slate-500 mt-0.5";
+  sub.textContent = `${store.category || ""} · ${store.floor || ""}`;
+  wrap.appendChild(title);
+  wrap.appendChild(sub);
+  label.appendChild(cb);
+  label.appendChild(wrap);
+  return label;
 }
 
 async function apiRequest(url, options = {}) {
@@ -345,6 +302,36 @@ async function apiRequest(url, options = {}) {
   return response.json();
 }
 
+async function uploadAdminImageFile(file) {
+  if (!file) {
+    throw new Error("Selecione um arquivo de imagem.");
+  }
+  const token = getToken();
+  if (!token) {
+    throw new Error("Sessao expirada. Faca login novamente.");
+  }
+  const body = new FormData();
+  body.append("file", file);
+  const response = await fetch("/api/admin/uploads/image", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body
+  });
+  if (!response.ok) {
+    let message = "Falha no upload.";
+    try {
+      const data = await response.json();
+      message = data.message || message;
+    } catch (_err) {}
+    if (response.status === 401) {
+      localStorage.removeItem(TOKEN_KEY);
+      setAuthMode(false);
+    }
+    throw new Error(message);
+  }
+  return response.json();
+}
+
 function decodeJwtPayload(token) {
   if (!token) return null;
   try {
@@ -367,10 +354,9 @@ async function performLogout() {
   setAuthMode(false);
   resetForm();
   resetEventForm();
-  resetGastronomyForm();
   adminStoresGrid.innerHTML = "";
   adminEventsGrid.innerHTML = "";
-  adminGastronomyGrid.innerHTML = "";
+  adminGastronomyList.innerHTML = "";
   window.location.href = "/admin-login";
 }
 
@@ -401,13 +387,15 @@ async function loadAdminEvents() {
   }
 }
 
-async function loadAdminGastronomy() {
+async function loadGastronomySelection() {
   try {
-    setGastronomyMessage("Carregando gastronomia...");
-    const items = await apiRequest("/api/admin/gastronomy");
-    adminGastronomyGrid.innerHTML = "";
-    items.forEach((item) => adminGastronomyGrid.appendChild(createAdminGastronomyCard(item)));
-    setGastronomyMessage(`${items.length} item(ns) de gastronomia cadastrado(s).`);
+    setGastronomyMessage("Carregando lojas...");
+    const stores = await apiRequest("/api/admin/stores");
+    const sorted = [...stores].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "pt"));
+    adminGastronomyList.innerHTML = "";
+    sorted.forEach((store) => adminGastronomyList.appendChild(renderGastronomyStoreRow(store)));
+    const selected = stores.filter((s) => Number(s.show_in_gastronomy) === 1).length;
+    setGastronomyMessage(`${selected} loja(s) na vitrine de gastronomia (de ${stores.length} cadastradas).`);
   } catch (error) {
     setGastronomyMessage(error.message, "error");
   }
@@ -432,30 +420,79 @@ loginForm.addEventListener("submit", async (event) => {
     setAdminMessage(`Autenticado como ${data.admin.email}.`, "success");
     await loadAdminStores();
     await loadAdminEvents();
-    await loadAdminGastronomy();
+    await loadGastronomySelection();
   } catch (error) {
     alert(error.message);
   }
 });
 
+saveGastronomySelectionBtn.addEventListener("click", async () => {
+  try {
+    saveGastronomySelectionBtn.disabled = true;
+    const ids = [...adminGastronomyList.querySelectorAll('input[name="gastro_store"]:checked')].map((el) =>
+      Number(el.value)
+    );
+    await apiRequest("/api/admin/gastronomy/selection", {
+      method: "PUT",
+      body: JSON.stringify({ storeIds: ids })
+    });
+    setGastronomyMessage("Selecao salva com sucesso.");
+    await loadGastronomySelection();
+  } catch (error) {
+    setGastronomyMessage(error.message, "error");
+  } finally {
+    saveGastronomySelectionBtn.disabled = false;
+  }
+});
+
 storeForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const formData = new FormData(storeForm);
-  const id = String(formData.get("id") || "");
 
-  const payload = {
-    name: String(formData.get("name") || "").trim(),
-    category: String(formData.get("category") || "").trim(),
-    floor: String(formData.get("floor") || "").trim(),
-    hours: `${String(formData.get("openTime") || "").trim()} - ${String(formData.get("closeTime") || "").trim()}`,
-    description: String(formData.get("description") || "").trim(),
-    imageUrl: String(formData.get("imageUrl") || "").trim(),
-    logoUrl: String(formData.get("logoUrl") || "").trim(),
-    whatsappUrl: String(formData.get("whatsappUrl") || "").trim(),
-    instagramUrl: String(formData.get("instagramUrl") || "").trim()
-  };
+  const imageFileInput = storeForm.querySelector('[data-store-file-for="imageUrl"]');
+  const logoFileInput = storeForm.querySelector('[data-store-file-for="logoUrl"]');
+  const submitBtn = storeForm.querySelector('button[type="submit"]');
+  const previousSubmitLabel = submitBtn ? submitBtn.textContent : "Salvar loja";
 
   try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Processando...";
+    }
+
+    if (imageFileInput?.files?.[0]) {
+      setAdminMessage("Enviando imagem principal...");
+      if (submitBtn) submitBtn.textContent = "Enviando imagem...";
+      const cover = await uploadAdminImageFile(imageFileInput.files[0]);
+      storeForm.elements.imageUrl.value = cover.url || "";
+      imageFileInput.value = "";
+    }
+
+    if (logoFileInput?.files?.[0]) {
+      setAdminMessage("Enviando logo...");
+      if (submitBtn) submitBtn.textContent = "Enviando logo...";
+      const logo = await uploadAdminImageFile(logoFileInput.files[0]);
+      storeForm.elements.logoUrl.value = logo.url || "";
+      logoFileInput.value = "";
+    }
+
+    const formData = new FormData(storeForm);
+    const id = String(formData.get("id") || "");
+
+    const payload = {
+      name: String(formData.get("name") || "").trim(),
+      category: String(formData.get("category") || "").trim(),
+      floor: String(formData.get("floor") || "").trim(),
+      hours: `${String(formData.get("openTime") || "").trim()} - ${String(formData.get("closeTime") || "").trim()}`,
+      description: String(formData.get("description") || "").trim(),
+      imageUrl: String(formData.get("imageUrl") || "").trim(),
+      logoUrl: String(formData.get("logoUrl") || "").trim(),
+      whatsappUrl: String(formData.get("whatsappUrl") || "").trim(),
+      instagramUrl: String(formData.get("instagramUrl") || "").trim()
+    };
+
+    setAdminMessage("Salvando loja...");
+    if (submitBtn) submitBtn.textContent = "Salvando...";
+
     let successMessage = "";
     if (id) {
       await apiRequest(`/api/admin/stores/${id}`, {
@@ -472,9 +509,15 @@ storeForm.addEventListener("submit", async (event) => {
     }
     resetForm();
     await loadAdminStores();
+    await loadGastronomySelection();
     setAdminMessage(successMessage, "success");
   } catch (error) {
     setAdminMessage(error.message || "Erro ao salvar loja.", "error");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = previousSubmitLabel;
+    }
   }
 });
 
@@ -490,17 +533,37 @@ openStoreFormBtn.addEventListener("click", () => {
 
 eventForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const formData = new FormData(eventForm);
-  const id = String(formData.get("id") || "");
-  const payload = {
-    title: String(formData.get("title") || "").trim(),
-    eventDate: String(formData.get("eventDate") || "").trim(),
-    description: String(formData.get("description") || "").trim(),
-    imageUrl: String(formData.get("imageUrl") || "").trim(),
-    highlight: formData.get("highlight") === "on"
-  };
+  const fileInput = eventForm.querySelector('[data-event-file-for="imageUrl"]');
+  const submitBtn = eventForm.querySelector('button[type="submit"]');
+  const previousSubmitLabel = submitBtn ? submitBtn.textContent : "Salvar evento";
 
   try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Processando...";
+    }
+
+    if (fileInput?.files?.[0]) {
+      setAdminMessage("Enviando imagem do evento...");
+      if (submitBtn) submitBtn.textContent = "Enviando imagem...";
+      const uploaded = await uploadAdminImageFile(fileInput.files[0]);
+      eventForm.elements.imageUrl.value = uploaded.url || "";
+      fileInput.value = "";
+    }
+
+    const formData = new FormData(eventForm);
+    const id = String(formData.get("id") || "");
+    const payload = {
+      title: String(formData.get("title") || "").trim(),
+      eventDate: String(formData.get("eventDate") || "").trim(),
+      description: String(formData.get("description") || "").trim(),
+      imageUrl: String(formData.get("imageUrl") || "").trim(),
+      highlight: formData.get("highlight") === "on"
+    };
+
+    setAdminMessage("Salvando evento...");
+    if (submitBtn) submitBtn.textContent = "Salvando...";
+
     if (id) {
       await apiRequest(`/api/admin/events/${id}`, {
         method: "PUT",
@@ -518,39 +581,11 @@ eventForm.addEventListener("submit", async (event) => {
     await loadAdminEvents();
   } catch (error) {
     setAdminMessage(error.message, "error");
-  }
-});
-
-gastronomyForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const formData = new FormData(gastronomyForm);
-  const id = String(formData.get("id") || "");
-  const payload = {
-    name: String(formData.get("name") || "").trim(),
-    cuisineType: String(formData.get("cuisineType") || "").trim(),
-    location: String(formData.get("location") || "").trim(),
-    description: String(formData.get("description") || "").trim(),
-    imageUrl: String(formData.get("imageUrl") || "").trim()
-  };
-
-  try {
-    if (id) {
-      await apiRequest(`/api/admin/gastronomy/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(payload)
-      });
-      setGastronomyMessage("Item atualizado com sucesso.");
-    } else {
-      await apiRequest("/api/admin/gastronomy", {
-        method: "POST",
-        body: JSON.stringify(payload)
-      });
-      setGastronomyMessage("Item criado com sucesso.");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = previousSubmitLabel;
     }
-    resetGastronomyForm();
-    await loadAdminGastronomy();
-  } catch (error) {
-    setGastronomyMessage(error.message, "error");
   }
 });
 
@@ -563,16 +598,6 @@ openEventFormBtn.addEventListener("click", () => {
   }
   openEventForm();
 });
-cancelGastronomyEditBtn.addEventListener("click", resetGastronomyForm);
-openGastronomyFormBtn.addEventListener("click", () => {
-  const isOpen = !gastronomyForm.classList.contains("hidden");
-  if (isOpen) {
-    resetGastronomyForm();
-    return;
-  }
-  openGastronomyForm();
-});
-
 adminUserMenuBtn.addEventListener("click", () => {
   adminUserDropdown.classList.toggle("hidden");
 });
@@ -602,7 +627,7 @@ async function bootstrap() {
 
     await loadAdminStores();
     await loadAdminEvents();
-    await loadAdminGastronomy();
+    await loadGastronomySelection();
   } catch (_error) {
     setAuthMode(false);
     localStorage.removeItem(TOKEN_KEY);

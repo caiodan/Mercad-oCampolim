@@ -262,7 +262,7 @@ function renderGastronomy() {
   gastronomyTrack.classList.remove("is-marquee");
 
   if (!gastronomyItems.length) {
-    gastronomyState.textContent = "Nenhum item de gastronomia cadastrado no momento.";
+    gastronomyState.textContent = "Nenhuma loja selecionada para a secao de gastronomia no momento.";
     return;
   }
 

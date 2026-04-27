@@ -32,7 +32,12 @@ class StoreService {
     const error = this.validatePayload(payload);
     if (error) throw new Error(error);
 
-    return this.storeRepository.updateStore(id, payload);
+    const merged = {
+      ...payload,
+      showInGastronomy:
+        payload.showInGastronomy !== undefined ? payload.showInGastronomy : Boolean(existing.show_in_gastronomy)
+    };
+    return this.storeRepository.updateStore(id, merged);
   }
 
   async deleteStore(id) {
