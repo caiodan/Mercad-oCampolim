@@ -2,6 +2,8 @@ let stores = [];
 let events = [];
 let gastronomyItems = [];
 const INITIAL_STORE_LIMIT = 12;
+const EVENT_PREVIEW_THUMB_LIMIT = 4;
+const EVENT_PREVIEW_THUMB_LIMIT_MOBILE = 3;
 let isShowingAllStores = false;
 let selectedEventId = null;
 let selectedEventImageIndex = 0;
@@ -55,12 +57,23 @@ const eventHighlight = document.getElementById("event-highlight");
 const eventList = document.getElementById("event-list");
 const eventsPreview = document.getElementById("events-preview");
 const eventsCalendarView = document.getElementById("events-calendar-view");
+const eventDetailView = document.getElementById("event-detail-view");
+const eventDetailContent = document.getElementById("event-detail-content");
+const eventLightbox = document.getElementById("event-lightbox");
+const eventLightboxImage = document.getElementById("event-lightbox-image");
+const eventLightboxCloseBtn = document.getElementById("event-lightbox-close");
+const eventLightboxPrevBtn = document.getElementById("event-lightbox-prev");
+const eventLightboxNextBtn = document.getElementById("event-lightbox-next");
 const fullCalendarGrid = document.getElementById("full-calendar-grid");
 const openCalendarBtn = document.getElementById("open-calendar-btn");
 const backToEventsBtn = document.getElementById("back-to-events-btn");
+const backFromEventDetailBtn = document.getElementById("back-from-event-detail-btn");
 const gastronomyState = document.getElementById("gastronomy-state");
 const gastronomyTrack = document.getElementById("gastronomy-track");
 const sectionsToAnimate = document.querySelectorAll(".section-enter");
+let eventLightboxImages = [];
+let eventLightboxIndex = 0;
+let eventLightboxTouchStartX = null;
 
 /** Capa quando a loja nao tem URL valida ou a imagem externa falha ao carregar. */
 const DEFAULT_STORE_IMAGE_URL =
@@ -103,7 +116,8 @@ function syncBodyScrollLock() {
   const mobilePanel = document.getElementById("mobile-nav-panel");
   const menuOpen = mobilePanel && mobilePanel.classList.contains("is-open");
   const storeOpen = modal && modal.classList.contains("is-open");
-  document.body.style.overflow = menuOpen || storeOpen ? "hidden" : "";
+  const lightboxOpen = eventLightbox && eventLightbox.classList.contains("is-open");
+  document.body.style.overflow = menuOpen || storeOpen || lightboxOpen ? "hidden" : "";
 }
 
 function parseStoreCategorySlugs(store) {
@@ -356,6 +370,10 @@ function renderEvents() {
     selectedEventImageIndex = 0;
   }
   const activeImage = selected.images[selectedEventImageIndex] || selected.image_url;
+  const isMobileViewport = window.matchMedia("(max-width: 640px)").matches;
+  const thumbsLimit = isMobileViewport ? EVENT_PREVIEW_THUMB_LIMIT_MOBILE : EVENT_PREVIEW_THUMB_LIMIT;
+  const previewThumbs = selected.images.slice(0, thumbsLimit);
+  const remainingThumbsCount = Math.max(0, selected.images.length - previewThumbs.length);
   const otherEvents = sortedEvents
     .filter((event) => Number(event.id) !== Number(selected.id))
     .slice(0, 2);
@@ -363,21 +381,24 @@ function renderEvents() {
   eventHighlight.innerHTML = `
     <div data-event-id="${selected.id}" class="group relative event-card-large bg-white rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer">
       <img src="${activeImage || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt="${selected.title}">
-      <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent flex flex-col justify-end p-10 lg:p-16">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent flex flex-col justify-end p-5 sm:p-8 lg:p-16">
         <div class="flex items-center gap-4 text-amber-400 mb-4">
           <span class="px-4 py-1 rounded-full border border-amber-400/30 bg-amber-400/10 text-[10px] font-bold uppercase tracking-widest">Destaque do Mes</span>
           <span class="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><i data-lucide="calendar" class="w-3 h-3"></i> ${selected.event_date || "Data a confirmar"}</span>
         </div>
-        <h4 class="text-4xl lg:text-5xl font-serif italic text-white mb-6">${selected.title}</h4>
-        <p class="text-white/70 text-lg max-w-xl leading-relaxed mb-8">${selected.description}</p>
+        <h4 class="text-3xl sm:text-4xl lg:text-5xl font-serif italic text-white mb-4 sm:mb-6">${selected.title}</h4>
+        <p class="text-white/75 text-base sm:text-lg max-w-xl leading-relaxed mb-5 sm:mb-8 whitespace-pre-line line-clamp-4 sm:line-clamp-none">${selected.description}</p>
         <div class="grid grid-cols-4 sm:grid-cols-6 gap-2 lg:gap-3" id="event-gallery-thumbs">
-          ${selected.images
+          ${previewThumbs
             .map(
               (url, idx) => `<button type="button" data-event-thumb-index="${idx}" class="group relative overflow-hidden rounded-xl border ${idx === selectedEventImageIndex ? "border-amber-300" : "border-white/30"}">
                 <img src="${url}" alt="Foto ${idx + 1} do evento ${selected.title}" class="w-full h-16 object-cover group-hover:scale-105 transition-transform">
               </button>`
             )
             .join("")}
+          ${remainingThumbsCount > 0
+            ? `<div class="rounded-xl border border-white/30 bg-black/35 h-16 grid place-items-center text-[11px] font-bold uppercase tracking-widest text-white/90">+${remainingThumbsCount}</div>`
+            : ""}
         </div>
       </div>
     </div>
@@ -394,7 +415,7 @@ function renderEvents() {
       <div class="flex-1 p-8 flex flex-col justify-center">
         <span class="text-[9px] font-bold text-amber-600 uppercase tracking-[0.2em] mb-2">${event.event_date}</span>
         <h5 class="text-xl font-serif italic text-slate-900 group-hover:text-marron transition-colors mb-2 leading-tight">${event.title}</h5>
-        <p class="text-xs text-slate-500 line-clamp-2">${event.description}</p>
+        <p class="text-xs text-slate-500 line-clamp-2 whitespace-pre-line">${event.description}</p>
       </div>
     `;
     eventList.appendChild(card);
@@ -507,6 +528,43 @@ function formatEventRecurrenceText(event) {
     return count ? `${count} data(s) especifica(s)` : "Datas especificas";
   }
   return "Periodo continuo";
+}
+
+function formatSpecificDateToBr(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return `${day}/${month}/${year}`;
+  }
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) return raw;
+  const day = String(dt.getDate()).padStart(2, "0");
+  const month = String(dt.getMonth() + 1).padStart(2, "0");
+  const year = String(dt.getFullYear());
+  return `${day}/${month}/${year}`;
+}
+
+function renderEventRecurrenceHtml(event, className) {
+  const recurrenceText = formatEventRecurrenceText(event);
+  const specificDates = Array.isArray(event.specific_dates) ? event.specific_dates : [];
+  if (String(event.recurrence_type || "none") !== "specific_dates" || !specificDates.length) {
+    return `<p class="${className}">${recurrenceText}</p>`;
+  }
+  const datesLines = specificDates.map((date) => formatSpecificDateToBr(date)).filter(Boolean);
+  const tooltipHtml = datesLines.length ? datesLines.join("<br>") : "Sem datas especificas";
+  return `
+    <p class="${className} inline-flex items-center gap-1.5">
+      <span>${recurrenceText}</span>
+      <span class="group relative inline-flex items-center">
+        <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400"></i>
+        <span class="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium normal-case tracking-normal text-slate-700 shadow-lg group-hover:block">
+          ${tooltipHtml}
+        </span>
+      </span>
+    </p>
+  `;
 }
 
 function formatEventPeriodLine(event) {
@@ -760,27 +818,124 @@ function renderFullCalendar() {
           <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">${event.event_date}</span>
           ${event.highlight ? '<span class="rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-amber-700">Destaque</span>' : ""}
         </div>
-        <p class="mt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">${formatEventRecurrenceText(event)}</p>
+        ${renderEventRecurrenceHtml(event, "mt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400")}
         <h4 class="mt-3 text-2xl font-serif italic text-slate-900 leading-tight line-clamp-1">${event.title}</h4>
         <p class="mt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500">${formatEventPeriodLine(event)}</p>
-        <p class="mt-3 text-sm text-slate-500 leading-relaxed">${event.description}</p>
+        <p class="mt-3 text-sm text-slate-500 leading-relaxed whitespace-pre-line">${event.description}</p>
       </div>
     `;
     fullCalendarGrid.appendChild(card);
   });
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function showCalendarView() {
   eventsPreview.classList.add("hidden");
+  eventDetailView.classList.add("hidden");
   eventsCalendarView.classList.remove("hidden");
   eventState.textContent = `${events.length} evento(s) no calendario completo.`;
   renderFullCalendar();
 }
 
 function showPreviewView() {
+  eventDetailView.classList.add("hidden");
   eventsCalendarView.classList.add("hidden");
   eventsPreview.classList.remove("hidden");
   eventState.textContent = `${events.length} evento(s) exibido(s).`;
+}
+
+function showEventDetailView(eventId, options = {}) {
+  const { fromCalendar = false } = options;
+  const selected = events.find((item) => Number(item.id) === Number(eventId));
+  if (!selected || !eventDetailContent) return;
+
+  selectedEventId = selected.id;
+  selectedEventImageIndex = 0;
+
+  const photos = selected.images || [];
+  const photosHtml = photos.length
+    ? photos
+      .map(
+        (url, idx) => `
+          <button type="button" data-event-detail-photo-index="${idx}" class="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+            <img src="${url}" alt="Foto ${idx + 1} do evento ${selected.title}" class="w-full h-36 sm:h-40 object-cover transition-transform duration-700 ease-out group-hover:scale-105">
+          </button>
+        `
+      )
+      .join("")
+    : `
+      <div class="rounded-xl border border-dashed border-slate-300 bg-slate-50 h-36 sm:h-40 grid place-items-center text-xs font-semibold uppercase tracking-widest text-slate-400">
+        Sem fotos adicionais
+      </div>
+    `;
+
+  eventDetailContent.innerHTML = `
+    <div class="h-[420px] sm:h-[500px] overflow-hidden">
+      <img src="${selected.image_url || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" alt="${selected.title}" class="w-full h-full object-cover">
+    </div>
+    <div class="p-6 sm:p-8 lg:p-10 space-y-6">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">${selected.event_date || "Data a confirmar"}</span>
+        ${selected.highlight ? '<span class="rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-amber-700">Destaque</span>' : ""}
+      </div>
+      <h4 class="text-3xl sm:text-4xl font-serif italic text-slate-900 leading-tight">${selected.title}</h4>
+      <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-500">${formatEventPeriodLine(selected)}</p>
+      ${renderEventRecurrenceHtml(selected, "text-[11px] font-semibold uppercase tracking-widest text-slate-400")}
+      <p class="text-slate-600 leading-relaxed whitespace-pre-line">${selected.description || "Sem descrição disponível."}</p>
+      <div class="space-y-3">
+        <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Galeria completa</p>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          ${photosHtml}
+        </div>
+      </div>
+    </div>
+  `;
+
+  eventsPreview.classList.add("hidden");
+  eventsCalendarView.classList.add("hidden");
+  eventDetailView.classList.remove("hidden");
+  eventState.textContent = fromCalendar
+    ? "Visualizando detalhes do evento selecionado no calendario."
+    : "Visualizando detalhes do evento selecionado.";
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function updateEventLightboxImage() {
+  if (!eventLightboxImage || !eventLightboxImages.length) return;
+  const max = Math.max(0, eventLightboxImages.length - 1);
+  eventLightboxIndex = Math.max(0, Math.min(eventLightboxIndex, max));
+  eventLightboxImage.src = eventLightboxImages[eventLightboxIndex];
+}
+
+function openEventLightbox(images, startIndex = 0) {
+  if (!eventLightbox || !Array.isArray(images) || !images.length) return;
+  eventLightboxImages = images.map((url) => String(url || "").trim()).filter(Boolean);
+  if (!eventLightboxImages.length) return;
+  eventLightboxIndex = Math.max(0, Math.min(Number(startIndex) || 0, eventLightboxImages.length - 1));
+  updateEventLightboxImage();
+  eventLightbox.classList.add("is-open");
+  syncBodyScrollLock();
+}
+
+function closeEventLightbox() {
+  if (!eventLightbox) return;
+  eventLightbox.classList.remove("is-open");
+  eventLightboxImages = [];
+  eventLightboxIndex = 0;
+  if (eventLightboxImage) eventLightboxImage.src = "";
+  syncBodyScrollLock();
+}
+
+function goToNextEventLightboxImage() {
+  if (!eventLightboxImages.length) return;
+  eventLightboxIndex = (eventLightboxIndex + 1) % eventLightboxImages.length;
+  updateEventLightboxImage();
+}
+
+function goToPrevEventLightboxImage() {
+  if (!eventLightboxImages.length) return;
+  eventLightboxIndex = (eventLightboxIndex - 1 + eventLightboxImages.length) % eventLightboxImages.length;
+  updateEventLightboxImage();
 }
 
 async function loadPublicData() {
@@ -886,11 +1041,55 @@ function closeMobileNav() {
 }
 
 document.getElementById("close-modal").onclick = closeModal;
+if (eventLightboxCloseBtn) {
+  eventLightboxCloseBtn.addEventListener("click", closeEventLightbox);
+}
+if (eventLightboxPrevBtn) {
+  eventLightboxPrevBtn.addEventListener("click", goToPrevEventLightboxImage);
+}
+if (eventLightboxNextBtn) {
+  eventLightboxNextBtn.addEventListener("click", goToNextEventLightboxImage);
+}
+if (eventLightbox) {
+  eventLightbox.addEventListener("click", (event) => {
+    if (event.target !== eventLightbox) return;
+    closeEventLightbox();
+  });
+  eventLightbox.addEventListener("touchstart", (event) => {
+    eventLightboxTouchStartX = event.changedTouches?.[0]?.clientX ?? null;
+  }, { passive: true });
+  eventLightbox.addEventListener("touchend", (event) => {
+    if (eventLightboxTouchStartX == null) return;
+    const endX = event.changedTouches?.[0]?.clientX ?? eventLightboxTouchStartX;
+    const delta = endX - eventLightboxTouchStartX;
+    eventLightboxTouchStartX = null;
+    if (Math.abs(delta) < 40) return;
+    if (delta < 0) {
+      goToNextEventLightboxImage();
+      return;
+    }
+    goToPrevEventLightboxImage();
+  });
+}
 modal.addEventListener("click", (event) => {
   if (event.target !== modal) return;
   closeModal();
 });
 document.addEventListener("keydown", (event) => {
+  if (eventLightbox && eventLightbox.classList.contains("is-open")) {
+    if (event.key === "Escape") {
+      closeEventLightbox();
+      return;
+    }
+    if (event.key === "ArrowLeft") {
+      goToPrevEventLightboxImage();
+      return;
+    }
+    if (event.key === "ArrowRight") {
+      goToNextEventLightboxImage();
+      return;
+    }
+  }
   if (event.key !== "Escape") return;
   const mobilePanel = document.getElementById("mobile-nav-panel");
   if (mobilePanel && mobilePanel.classList.contains("is-open")) {
@@ -952,8 +1151,21 @@ eventsPreview.addEventListener("click", (event) => {
   if (!eventCard) return;
 
   const eventId = Number(eventCard.getAttribute("data-event-id"));
-  selectEventInPage(eventId);
+  showEventDetailView(eventId);
 });
+
+if (eventDetailContent) {
+  eventDetailContent.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const photoButton = target.closest("[data-event-detail-photo-index]");
+    if (!photoButton) return;
+    const photoIndex = Number(photoButton.getAttribute("data-event-detail-photo-index"));
+    const selected = events.find((item) => Number(item.id) === Number(selectedEventId));
+    if (!selected || !Array.isArray(selected.images) || !selected.images.length) return;
+    openEventLightbox(selected.images, Number.isFinite(photoIndex) ? photoIndex : 0);
+  });
+}
 
 fullCalendarGrid.addEventListener("click", (event) => {
   const clickTarget = event.target;
@@ -963,7 +1175,7 @@ fullCalendarGrid.addEventListener("click", (event) => {
   if (!eventCard) return;
 
   const eventId = Number(eventCard.getAttribute("data-event-id"));
-  selectEventInPage(eventId, { ensurePreviewVisible: true });
+  showEventDetailView(eventId, { fromCalendar: true });
 });
 
 if (storeCategoryToggle) {
@@ -1028,12 +1240,19 @@ toggleStoresBtn.addEventListener("click", () => {
 
 openCalendarBtn.addEventListener("click", showCalendarView);
 backToEventsBtn.addEventListener("click", showPreviewView);
+if (backFromEventDetailBtn) {
+  backFromEventDetailBtn.addEventListener("click", showPreviewView);
+}
 
 window.addEventListener("resize", () => {
-  if (!window.matchMedia("(min-width: 1024px)").matches) return;
-  const mobilePanel = document.getElementById("mobile-nav-panel");
-  if (mobilePanel && mobilePanel.classList.contains("is-open")) {
-    closeMobileNav();
+  if (window.matchMedia("(min-width: 1024px)").matches) {
+    const mobilePanel = document.getElementById("mobile-nav-panel");
+    if (mobilePanel && mobilePanel.classList.contains("is-open")) {
+      closeMobileNav();
+    }
+  }
+  if (!eventsPreview.classList.contains("hidden")) {
+    renderEvents();
   }
 });
 

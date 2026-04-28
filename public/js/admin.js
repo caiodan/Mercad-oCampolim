@@ -6,15 +6,21 @@ const adminStoresGrid = document.getElementById("adminStoresGrid");
 const adminState = document.getElementById("adminState");
 const cancelEditBtn = document.getElementById("cancelEditBtn");
 const openStoreFormBtn = document.getElementById("openStoreFormBtn");
+const closeStoreModalBtn = document.getElementById("closeStoreModalBtn");
 const eventForm = document.getElementById("eventForm");
 const adminEventsGrid = document.getElementById("adminEventsGrid");
 const adminEventsState = document.getElementById("adminEventsState");
 const cancelEventEditBtn = document.getElementById("cancelEventEditBtn");
 const openEventFormBtn = document.getElementById("openEventFormBtn");
+const closeEventModalBtn = document.getElementById("closeEventModalBtn");
+const adminEditModalBackdrop = document.getElementById("adminEditModalBackdrop");
 const addEventPhotoInputBtn = document.getElementById("addEventPhotoInputBtn");
 const eventGalleryExtraInputs = document.getElementById("eventGalleryExtraInputs");
 const eventExistingPhotos = document.getElementById("eventExistingPhotos");
 const eventExistingPhotosText = document.getElementById("eventExistingPhotosText");
+const eventExistingPhotosGrid = document.getElementById("eventExistingPhotosGrid");
+const eventCurrentCoverPreview = document.getElementById("eventCurrentCoverPreview");
+const eventCurrentCoverImage = document.getElementById("eventCurrentCoverImage");
 const eventWeeklyOptions = document.getElementById("eventWeeklyOptions");
 const eventSpecificDatesOptions = document.getElementById("eventSpecificDatesOptions");
 const addSpecificDateBtn = document.getElementById("addSpecificDateBtn");
@@ -33,6 +39,9 @@ const headerLogoutBtn = document.getElementById("headerLogoutBtn");
 const TOKEN_KEY = "mercado_admin_token";
 /** Aviso no front; o servidor aceita ate ~25 MB (ver uploadImage). */
 const IMAGE_SOFT_LIMIT_BYTES = 5 * 1024 * 1024;
+let activeEditModalForm = null;
+let eventCoverPreviewObjectUrl = null;
+let eventDraftImages = [];
 
 function getToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -116,6 +125,7 @@ function resetForm() {
   cancelEditBtn.classList.add("hidden");
   clearImageSoftHints(storeForm);
   closeStoreForm();
+  closeActiveEditModal();
 }
 
 function resetEventForm() {
@@ -131,11 +141,47 @@ function resetEventForm() {
   setEventSpecificDates([]);
   syncEventRecurrenceOptions();
   clearEventGalleryExtraInputs();
-  setEventExistingPhotos([]);
+  setEventDraftImages([]);
   cancelEventEditBtn.classList.add("hidden");
   clearImageSoftHints(eventForm);
   refreshEventFileTileLabels();
   closeEventForm();
+  closeActiveEditModal();
+}
+
+function setEventCurrentCover(url) {
+  if (!eventCurrentCoverPreview || !eventCurrentCoverImage) return;
+  const safeUrl = String(url || "").trim();
+  if (!safeUrl) {
+    eventCurrentCoverPreview.classList.add("hidden");
+    eventCurrentCoverImage.src = "";
+    if (eventCoverPreviewObjectUrl) {
+      URL.revokeObjectURL(eventCoverPreviewObjectUrl);
+      eventCoverPreviewObjectUrl = null;
+    }
+    return;
+  }
+  eventCurrentCoverImage.src = safeUrl;
+  eventCurrentCoverPreview.classList.remove("hidden");
+}
+
+function openEditModal(formElement) {
+  if (!formElement || !adminEditModalBackdrop) return;
+  activeEditModalForm = formElement;
+  formElement.classList.add("is-edit-modal");
+  adminEditModalBackdrop.classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function closeActiveEditModal() {
+  if (activeEditModalForm) {
+    activeEditModalForm.classList.remove("is-edit-modal");
+  }
+  activeEditModalForm = null;
+  if (adminEditModalBackdrop) {
+    adminEditModalBackdrop.classList.add("hidden");
+  }
+  document.body.style.overflow = "";
 }
 
 function syncEventRecurrenceOptions() {
@@ -221,10 +267,21 @@ function updateEventFileTileLabel(input) {
   const files = Array.from(input.files || []);
   if (!files.length) {
     labelText.textContent = "Nenhum arquivo selecionado";
+    if (input.matches("[data-event-cover-file]")) {
+      const currentCoverUrl = String(eventForm.elements.imageUrl?.value || "").trim();
+      setEventCurrentCover(currentCoverUrl);
+    }
     return;
   }
   if (files.length === 1) {
     labelText.textContent = files[0].name;
+    if (input.matches("[data-event-cover-file]")) {
+      if (eventCoverPreviewObjectUrl) {
+        URL.revokeObjectURL(eventCoverPreviewObjectUrl);
+      }
+      eventCoverPreviewObjectUrl = URL.createObjectURL(files[0]);
+      setEventCurrentCover(eventCoverPreviewObjectUrl);
+    }
     return;
   }
   labelText.textContent = `${files.length} arquivos selecionados`;
@@ -238,14 +295,39 @@ function refreshEventFileTileLabels() {
 }
 
 function setEventExistingPhotos(urls) {
-  if (!eventExistingPhotos || !eventExistingPhotosText) return;
+  if (!eventExistingPhotos || !eventExistingPhotosText || !eventExistingPhotosGrid) return;
   if (!Array.isArray(urls) || !urls.length) {
     eventExistingPhotos.classList.add("hidden");
     eventExistingPhotosText.textContent = "";
+    eventExistingPhotosGrid.innerHTML = "";
     return;
   }
   eventExistingPhotos.classList.remove("hidden");
   eventExistingPhotosText.textContent = `${urls.length} foto(s) cadastrada(s) atualmente.`;
+  eventExistingPhotosGrid.innerHTML = urls
+    .map((url, index) => {
+      const safeUrl = String(url || "").trim();
+      if (!safeUrl) return "";
+      return `
+        <div class="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+          <img src="${safeUrl}" alt="Foto atual ${index + 1}" class="w-full h-16 object-cover">
+          ${index === 0 ? '<span class="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white">Capa</span>' : ""}
+          <button type="button" data-remove-existing-photo="${index}" class="absolute right-1 top-1 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-red-700 hover:bg-red-100 transition-colors" aria-label="Remover foto ${index + 1}">✕</button>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function setEventDraftImages(images) {
+  const normalized = (Array.isArray(images) ? images : [])
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+  eventDraftImages = normalized;
+  eventForm.elements.imageUrls.value = JSON.stringify(eventDraftImages);
+  eventForm.elements.imageUrl.value = eventDraftImages[0] || "";
+  setEventCurrentCover(eventForm.elements.imageUrl.value);
+  setEventExistingPhotos(eventDraftImages);
 }
 
 function formatAdminEventRecurrence(event) {
@@ -306,6 +388,22 @@ function formatAdminEventPeriodLine(event) {
     return `${day}/${month}/${year}`;
   };
   return `Inicio: ${toBr(start || end)} · Fim: ${toBr(end || start)}`;
+}
+
+function normalizeDateInputValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return `${year}-${month}-${day}`;
+  }
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const year = String(parsed.getFullYear());
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function openStoreForm() {
@@ -430,8 +528,10 @@ function createAdminCard(store) {
     "Editar",
     "px-4 py-2 rounded-full border border-slate-300 bg-white text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-100 transition-colors",
     () => {
-      openStoreForm();
       storeForm.elements.id.value = String(store.id);
+      openStoreFormBtn.textContent = "Adicionar loja";
+      openEditModal(storeForm);
+      openStoreForm();
       storeForm.elements.name.value = store.name;
       setStoreFormCategoriesChecked(getStoreCategoriesFromApi(store));
       storeForm.elements.floor.value = store.floor;
@@ -444,7 +544,6 @@ function createAdminCard(store) {
       storeForm.elements.whatsappUrl.value = store.whatsapp_url || "";
       storeForm.elements.instagramUrl.value = store.instagram_url || "";
       cancelEditBtn.classList.remove("hidden");
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   );
 
@@ -490,7 +589,7 @@ function createAdminEventCard(event) {
       </div>
       <h4 class="mt-3 text-2xl font-serif italic text-slate-900 leading-tight line-clamp-1">${event.title}</h4>
       <p class="mt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500">${formatAdminEventPeriodLine(event)}</p>
-      <p class="mt-3 text-sm text-slate-500 leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${event.description}</p>
+      <p class="mt-3 text-sm text-slate-500 leading-relaxed whitespace-pre-line" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${event.description}</p>
       <p class="mt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">${photoCount} foto(s) · ${recurrenceLabel}</p>
       <p class="mt-1 text-[11px] text-slate-500">${formatAdminEventRecurrence(event)}</p>
       <div class="mt-auto pt-4 flex justify-end gap-2" data-event-actions></div>
@@ -504,22 +603,23 @@ function createAdminEventCard(event) {
     "px-4 py-2 rounded-full border border-slate-300 bg-white text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-100 transition-colors",
     () => {
       eventForm.elements.id.value = String(event.id);
+      openEventFormBtn.textContent = "Adicionar evento";
+      openEditModal(eventForm);
       openEventForm();
       eventForm.elements.title.value = event.title;
-      eventForm.elements.periodStart.value = event.period_start || "";
-      eventForm.elements.periodEnd.value = event.period_end || "";
+      const startValue = normalizeDateInputValue(event.period_start || event.event_date);
+      const endValue = normalizeDateInputValue(event.period_end || event.period_start || event.event_date);
+      eventForm.elements.periodStart.value = startValue;
+      eventForm.elements.periodEnd.value = endValue;
       eventForm.elements.recurrenceType.value = event.recurrence_type || "none";
       setEventWeekdays(Array.isArray(event.weekdays) ? event.weekdays : []);
       setEventSpecificDates(Array.isArray(event.specific_dates) ? event.specific_dates : []);
       syncEventRecurrenceOptions();
       eventForm.elements.description.value = event.description;
-      eventForm.elements.imageUrl.value = eventImages[0] || event.image_url || "";
-      eventForm.elements.imageUrls.value = JSON.stringify(eventImages);
       clearEventGalleryExtraInputs();
-      setEventExistingPhotos(eventImages);
+      setEventDraftImages(eventImages);
       eventForm.elements.highlight.checked = Boolean(event.highlight);
       cancelEventEditBtn.classList.remove("hidden");
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   );
 
@@ -788,7 +888,7 @@ storeForm.addEventListener("submit", async (event) => {
       categories,
       floor: String(formData.get("floor") || "").trim(),
       hours: `${String(formData.get("openTime") || "").trim()} - ${String(formData.get("closeTime") || "").trim()}`,
-      description: String(formData.get("description") || "").trim(),
+      description: String(formData.get("description") || ""),
       imageUrl: String(formData.get("imageUrl") || "").trim(),
       logoUrl: String(formData.get("logoUrl") || "").trim(),
       whatsappUrl: String(formData.get("whatsappUrl") || "").trim(),
@@ -827,7 +927,14 @@ storeForm.addEventListener("submit", async (event) => {
 });
 
 cancelEditBtn.addEventListener("click", resetForm);
+if (closeStoreModalBtn) {
+  closeStoreModalBtn.addEventListener("click", resetForm);
+}
 openStoreFormBtn.addEventListener("click", () => {
+  if (activeEditModalForm === storeForm) {
+    resetForm();
+    return;
+  }
   const isOpen = !storeForm.classList.contains("hidden");
   if (isOpen) {
     resetForm();
@@ -860,49 +967,31 @@ eventForm.addEventListener("submit", async (event) => {
     } catch (_error) {
       galleryUrls = [];
     }
-
-    if (coverInput?.files?.[0]) {
-      setAdminMessage("Enviando capa do evento...");
-      if (submitBtn) submitBtn.textContent = "Enviando capa...";
-      const uploadedCover = await uploadAdminImageFile(coverInput.files[0]);
-      coverUrl = String(uploadedCover.url || "").trim();
-      coverInput.value = "";
-      clearImageSoftHintForFileInput(coverInput);
-    }
-
-    const galleryFiles = [
-      ...Array.from(batchInput?.files || []),
-      ...singleInputs.map((input) => input.files?.[0]).filter(Boolean)
-    ];
-    if (galleryFiles.length) {
-      setAdminMessage("Enviando fotos da galeria...");
-      if (submitBtn) submitBtn.textContent = `Enviando ${galleryFiles.length} foto(s)...`;
-      const uploadedGallery = await Promise.all(galleryFiles.map((file) => uploadAdminImageFile(file)));
-      const newGalleryUrls = uploadedGallery.map((item) => String(item.url || "").trim()).filter(Boolean);
-      galleryUrls = [...galleryUrls, ...newGalleryUrls];
-      if (batchInput) {
-        batchInput.value = "";
-        clearImageSoftHintForFileInput(batchInput);
+    const normalizeEventImages = ({ currentCover, currentGallery }) => {
+      const normalizedGallery = (Array.isArray(currentGallery) ? currentGallery : [])
+        .map((url) => String(url || "").trim())
+        .filter(Boolean);
+      let normalizedCover = String(currentCover || "").trim();
+      if (normalizedCover) {
+        return {
+          coverUrl: normalizedCover,
+          galleryUrls: [normalizedCover, ...normalizedGallery.filter((url) => url !== normalizedCover)]
+        };
       }
-      singleInputs.forEach((input) => {
-        input.value = "";
-        clearImageSoftHintForFileInput(input);
-      });
-      clearEventGalleryExtraInputs();
-    }
+      if (normalizedGallery.length) {
+        normalizedCover = normalizedGallery[0];
+      }
+      return {
+        coverUrl: normalizedCover,
+        galleryUrls: normalizedCover ? [normalizedCover, ...normalizedGallery.filter((url) => url !== normalizedCover)] : normalizedGallery
+      };
+    };
 
-    if (coverUrl) {
-      galleryUrls = [coverUrl, ...galleryUrls.filter((url) => String(url).trim() !== coverUrl)];
-    }
-    if (!coverUrl && galleryUrls.length) {
-      coverUrl = galleryUrls[0];
-    }
+    ({ coverUrl, galleryUrls } = normalizeEventImages({ currentCover: coverUrl, currentGallery: galleryUrls }));
     if (!coverUrl) {
       throw new Error("Selecione ao menos a imagem principal (capa) do evento.");
     }
-    eventForm.elements.imageUrl.value = coverUrl;
-    eventForm.elements.imageUrls.value = JSON.stringify(galleryUrls);
-    setEventExistingPhotos(galleryUrls);
+    setEventDraftImages(galleryUrls);
 
     const payload = {
       title: String(formData.get("title") || "").trim(),
@@ -912,25 +1001,117 @@ eventForm.addEventListener("submit", async (event) => {
       weekdays: Array.from(eventForm.querySelectorAll('input[name="weekdays"]:checked'), (input) => Number(input.value))
         .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6),
       specificDates: getEventSpecificDates(),
-      description: String(formData.get("description") || "").trim(),
+      description: String(formData.get("description") || ""),
       imageUrl: coverUrl,
       imageUrls: galleryUrls,
       highlight: formData.get("highlight") === "on"
     };
 
-    setAdminMessage("Salvando evento...");
-    if (submitBtn) submitBtn.textContent = "Salvando...";
-
     if (id) {
+      setAdminMessage("Salvando dados do evento...");
+      if (submitBtn) submitBtn.textContent = "Salvando dados...";
       await apiRequest(`/api/admin/events/${id}`, {
         method: "PUT",
         body: JSON.stringify(payload)
       });
+
+      const galleryFiles = [
+        ...Array.from(batchInput?.files || []),
+        ...singleInputs.map((input) => input.files?.[0]).filter(Boolean)
+      ];
+      const hasNewCover = Boolean(coverInput?.files?.[0]);
+      const hasNewGallery = galleryFiles.length > 0;
+
+      if (hasNewCover || hasNewGallery) {
+        let uploadedCoverUrl = coverUrl;
+        let uploadedGalleryUrls = [...galleryUrls];
+
+        if (hasNewCover) {
+          setAdminMessage("Enviando nova capa...");
+          if (submitBtn) submitBtn.textContent = "Enviando capa...";
+          const uploadedCover = await uploadAdminImageFile(coverInput.files[0]);
+          uploadedCoverUrl = String(uploadedCover.url || "").trim();
+          coverInput.value = "";
+          clearImageSoftHintForFileInput(coverInput);
+        }
+
+        if (hasNewGallery) {
+          setAdminMessage("Enviando novas fotos...");
+          if (submitBtn) submitBtn.textContent = `Enviando ${galleryFiles.length} foto(s)...`;
+          const uploadedGallery = await Promise.all(galleryFiles.map((file) => uploadAdminImageFile(file)));
+          const newGalleryUrls = uploadedGallery.map((item) => String(item.url || "").trim()).filter(Boolean);
+          uploadedGalleryUrls = [...uploadedGalleryUrls, ...newGalleryUrls];
+          if (batchInput) {
+            batchInput.value = "";
+            clearImageSoftHintForFileInput(batchInput);
+          }
+          singleInputs.forEach((input) => {
+            input.value = "";
+            clearImageSoftHintForFileInput(input);
+          });
+          clearEventGalleryExtraInputs();
+        }
+
+        const normalizedAfterUpload = normalizeEventImages({ currentCover: uploadedCoverUrl, currentGallery: uploadedGalleryUrls });
+        setEventDraftImages(normalizedAfterUpload.galleryUrls);
+
+        setAdminMessage("Atualizando imagens do evento...");
+        if (submitBtn) submitBtn.textContent = "Atualizando imagens...";
+        await apiRequest(`/api/admin/events/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            ...payload,
+            imageUrl: normalizedAfterUpload.coverUrl,
+            imageUrls: normalizedAfterUpload.galleryUrls
+          })
+        });
+      }
+
       setAdminMessage("Evento atualizado com sucesso.", "success");
     } else {
+      const galleryFiles = [
+        ...Array.from(batchInput?.files || []),
+        ...singleInputs.map((input) => input.files?.[0]).filter(Boolean)
+      ];
+      if (coverInput?.files?.[0]) {
+        setAdminMessage("Enviando capa do evento...");
+        if (submitBtn) submitBtn.textContent = "Enviando capa...";
+        const uploadedCover = await uploadAdminImageFile(coverInput.files[0]);
+        coverUrl = String(uploadedCover.url || "").trim();
+        coverInput.value = "";
+        clearImageSoftHintForFileInput(coverInput);
+      }
+      if (galleryFiles.length) {
+        setAdminMessage("Enviando fotos da galeria...");
+        if (submitBtn) submitBtn.textContent = `Enviando ${galleryFiles.length} foto(s)...`;
+        const uploadedGallery = await Promise.all(galleryFiles.map((file) => uploadAdminImageFile(file)));
+        const newGalleryUrls = uploadedGallery.map((item) => String(item.url || "").trim()).filter(Boolean);
+        galleryUrls = [...galleryUrls, ...newGalleryUrls];
+        if (batchInput) {
+          batchInput.value = "";
+          clearImageSoftHintForFileInput(batchInput);
+        }
+        singleInputs.forEach((input) => {
+          input.value = "";
+          clearImageSoftHintForFileInput(input);
+        });
+        clearEventGalleryExtraInputs();
+      }
+      ({ coverUrl, galleryUrls } = normalizeEventImages({ currentCover: coverUrl, currentGallery: galleryUrls }));
+      if (!coverUrl) {
+        throw new Error("Selecione ao menos a imagem principal (capa) do evento.");
+      }
+      setEventDraftImages(galleryUrls);
+
+      setAdminMessage("Salvando evento...");
+      if (submitBtn) submitBtn.textContent = "Salvando...";
       await apiRequest("/api/admin/events", {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          imageUrl: coverUrl,
+          imageUrls: galleryUrls
+        })
       });
       setAdminMessage("Evento criado com sucesso.", "success");
     }
@@ -947,7 +1128,14 @@ eventForm.addEventListener("submit", async (event) => {
 });
 
 cancelEventEditBtn.addEventListener("click", resetEventForm);
+if (closeEventModalBtn) {
+  closeEventModalBtn.addEventListener("click", resetEventForm);
+}
 openEventFormBtn.addEventListener("click", () => {
+  if (activeEditModalForm === eventForm) {
+    resetEventForm();
+    return;
+  }
   const isOpen = !eventForm.classList.contains("hidden");
   if (isOpen) {
     resetEventForm();
@@ -955,7 +1143,7 @@ openEventFormBtn.addEventListener("click", () => {
   }
   openEventForm();
   syncEventRecurrenceOptions();
-  setEventExistingPhotos([]);
+  setEventDraftImages([]);
 });
 if (addEventPhotoInputBtn) {
   addEventPhotoInputBtn.addEventListener("click", () => {
@@ -990,6 +1178,49 @@ if (eventGalleryExtraInputs) {
     if (row) row.remove();
   });
 }
+if (eventCurrentCoverPreview) {
+  eventCurrentCoverPreview.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const removeBtn = target.closest("[data-remove-event-cover]");
+    if (!removeBtn) return;
+    if (!eventDraftImages.length) return;
+    setEventDraftImages(eventDraftImages.slice(1));
+  });
+}
+if (eventExistingPhotosGrid) {
+  eventExistingPhotosGrid.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const removeBtn = target.closest("[data-remove-existing-photo]");
+    if (!removeBtn) return;
+    const index = Number(removeBtn.getAttribute("data-remove-existing-photo"));
+    if (!Number.isInteger(index) || index < 0 || index >= eventDraftImages.length) return;
+    const next = eventDraftImages.filter((_url, i) => i !== index);
+    setEventDraftImages(next);
+  });
+}
+if (adminEditModalBackdrop) {
+  adminEditModalBackdrop.addEventListener("click", () => {
+    if (activeEditModalForm === storeForm) {
+      resetForm();
+      return;
+    }
+    if (activeEditModalForm === eventForm) {
+      resetEventForm();
+    }
+  });
+}
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (activeEditModalForm === storeForm) {
+    resetForm();
+    return;
+  }
+  if (activeEditModalForm === eventForm) {
+    resetEventForm();
+  }
+});
 adminUserMenuBtn.addEventListener("click", () => {
   adminUserDropdown.classList.toggle("hidden");
 });
