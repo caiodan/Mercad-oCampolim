@@ -95,9 +95,27 @@ function syncBodyScrollLock() {
   document.body.style.overflow = menuOpen || storeOpen || eventOpen ? "hidden" : "";
 }
 
+function parseStoreCategorySlugs(store) {
+  if (Array.isArray(store.categories) && store.categories.length) {
+    return store.categories.map((c) => String(c || "").trim()).filter(Boolean);
+  }
+  const single = store.category != null ? String(store.category).trim() : "";
+  return single ? [single] : [];
+}
+
 function normalizeStore(store) {
-  const rawCategory = String(store.category || "servicos").trim();
-  const normalizedCategory = normalizeText(rawCategory);
+  const slugs = parseStoreCategorySlugs(store);
+  const categoryKeys = [];
+  const seen = new Set();
+  for (const slug of slugs) {
+    const k = normalizeText(slug) || "servicos";
+    if (seen.has(k)) continue;
+    seen.add(k);
+    categoryKeys.push(k);
+  }
+  if (!categoryKeys.length) categoryKeys.push("servicos");
+  const rawPrimary = slugs[0] || "servicos";
+  const normalizedPrimary = normalizeText(rawPrimary) || "servicos";
   return {
     ...store,
     img: resolveStoreCoverUrl(store.image_url, store.img),
@@ -107,8 +125,10 @@ function normalizeStore(store) {
     desc: store.description || store.desc || "",
     whatsappUrl: store.whatsapp_url || store.whatsappUrl || "",
     instagramUrl: store.instagram_url || store.instagramUrl || "",
-    category: rawCategory,
-    categoryKey: normalizedCategory || "servicos"
+    categories: slugs,
+    category: rawPrimary,
+    categoryKey: normalizedPrimary,
+    categoryKeys
   };
 }
 
@@ -118,7 +138,7 @@ function renderStores(filter = "all") {
   const normalizedFilter = normalizeText(filter);
   const filtered = normalizedFilter === "all"
     ? stores
-    : stores.filter((store) => store.categoryKey === normalizedFilter);
+    : stores.filter((store) => (store.categoryKeys || []).includes(normalizedFilter));
   const visibleStores = isShowingAllStores ? filtered : filtered.slice(0, INITIAL_STORE_LIMIT);
 
   visibleStores.forEach((store) => {
@@ -148,7 +168,9 @@ function renderStores(filter = "all") {
         ${logoBlock}
       </div>
       <div class="p-6 text-slate-800">
-        <span class="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600">${formatCategoryLabel(store.category)}</span>
+        <span class="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600">${(store.categoryKeys || [])
+          .map((k) => formatCategoryLabel(k))
+          .join(" · ")}</span>
         <h4 class="text-2xl font-serif italic mt-2 group-hover:text-marron transition-colors leading-tight">${store.name}</h4>
         <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-5 border-t border-slate-50 pt-4">
           <i data-lucide="map-pin" class="w-3 h-3 text-marron"></i>
@@ -206,7 +228,7 @@ function formatCategoryLabel(category) {
 
 function renderCategoryFilters() {
   if (!categoryFilters) return;
-  const uniqueCategories = [...new Set(stores.map((store) => store.categoryKey).filter(Boolean))];
+  const uniqueCategories = [...new Set(stores.flatMap((store) => store.categoryKeys || []).filter(Boolean))];
   const orderedCategories = ["all", ...uniqueCategories.sort((a, b) => a.localeCompare(b, "pt-BR"))];
 
   categoryFilters.innerHTML = "";
@@ -583,7 +605,8 @@ function openModal(store) {
   if (!modalTitle || !modalCat || !modalDesc || !modalLoc || !modalHours || !modalImg) return;
 
   modalTitle.innerText = store.name || "Loja";
-  modalCat.innerText = store.category || "Categoria";
+  modalCat.innerText =
+    (store.categoryKeys || []).map((k) => formatCategoryLabel(k)).join(" · ") || "Categoria";
   modalDesc.innerText = store.desc || "Sem descrição disponível.";
   modalLoc.innerText = store.location || "Localização a confirmar";
   modalHours.innerText = store.hours || "Consulte a loja";

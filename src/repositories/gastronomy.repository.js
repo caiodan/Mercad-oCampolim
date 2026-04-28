@@ -5,7 +5,9 @@ class GastronomyRepository {
 
   async listItems() {
     return this.db.all(
-      `SELECT id, name, category AS cuisine_type, floor AS location, description, image_url
+      `SELECT id, name,
+              COALESCE(categories #>> '{0}', category) AS cuisine_type,
+              floor AS location, description, image_url
        FROM stores
        WHERE COALESCE(show_in_gastronomy, 0) = 1
        ORDER BY id DESC`

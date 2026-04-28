@@ -75,9 +75,31 @@ function setupImageSoftLimitWarnings() {
   });
 }
 
+function getStoreCategoriesFromApi(store) {
+  if (Array.isArray(store.categories) && store.categories.length) {
+    return store.categories.map((c) => String(c || "").trim()).filter(Boolean);
+  }
+  if (store.category) return [String(store.category).trim()].filter(Boolean);
+  return [];
+}
+
+function formatAdminCategoriesLine(store) {
+  const cats = getStoreCategoriesFromApi(store);
+  if (!cats.length) return "";
+  return cats.join(" · ");
+}
+
+function setStoreFormCategoriesChecked(selected) {
+  const set = new Set(selected.map((c) => String(c || "").trim()).filter(Boolean));
+  storeForm.querySelectorAll('input[name="categories"][type="checkbox"]').forEach((cb) => {
+    cb.checked = set.has(cb.value);
+  });
+}
+
 function resetForm() {
   storeForm.reset();
   storeForm.elements.id.value = "";
+  setStoreFormCategoriesChecked([]);
   cancelEditBtn.classList.add("hidden");
   clearImageSoftHints(storeForm);
   closeStoreForm();
@@ -194,7 +216,7 @@ function createAdminCard(store) {
       </div>
     </div>
     <div class="p-6 pt-11 text-slate-800">
-      <span class="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600">${store.category}</span>
+      <span class="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600">${formatAdminCategoriesLine(store)}</span>
       <h4 class="text-2xl font-serif italic mt-2 group-hover:text-marron transition-colors leading-tight">${store.name}</h4>
       <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-5 border-t border-slate-50 pt-4">
         <i data-lucide="map-pin" class="w-3 h-3 text-marron"></i>
@@ -217,7 +239,7 @@ function createAdminCard(store) {
       openStoreForm();
       storeForm.elements.id.value = String(store.id);
       storeForm.elements.name.value = store.name;
-      storeForm.elements.category.value = store.category;
+      setStoreFormCategoriesChecked(getStoreCategoriesFromApi(store));
       storeForm.elements.floor.value = store.floor;
       const { openTime, closeTime } = parseHoursRange(store.hours || "10:00 - 22:00");
       storeForm.elements.openTime.value = openTime;
@@ -319,7 +341,7 @@ function renderGastronomyStoreRow(store) {
   title.textContent = store.name || "";
   const sub = document.createElement("span");
   sub.className = "block text-[11px] text-slate-500 mt-0.5";
-  sub.textContent = `${store.category || ""} · ${store.floor || ""}`;
+  sub.textContent = [formatAdminCategoriesLine(store), store.floor || ""].filter(Boolean).join(" · ");
   wrap.appendChild(title);
   wrap.appendChild(sub);
   label.appendChild(cb);
@@ -542,9 +564,15 @@ storeForm.addEventListener("submit", async (event) => {
     const formData = new FormData(storeForm);
     const id = String(formData.get("id") || "");
 
+    const categories = formData.getAll("categories").map((v) => String(v || "").trim()).filter(Boolean);
+    if (!categories.length) {
+      setAdminMessage("Marque ao menos uma categoria.", "error");
+      return;
+    }
+
     const payload = {
       name: String(formData.get("name") || "").trim(),
-      category: String(formData.get("category") || "").trim(),
+      categories,
       floor: String(formData.get("floor") || "").trim(),
       hours: `${String(formData.get("openTime") || "").trim()} - ${String(formData.get("closeTime") || "").trim()}`,
       description: String(formData.get("description") || "").trim(),

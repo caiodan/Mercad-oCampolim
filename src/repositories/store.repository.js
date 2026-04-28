@@ -1,23 +1,61 @@
+function normalizeCategoriesFromRow(row) {
+  if (!row) return [];
+  const raw = row.categories;
+  if (Array.isArray(raw) && raw.length) {
+    return raw.map((c) => String(c || "").trim()).filter(Boolean);
+  }
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return Object.values(raw)
+      .map((c) => String(c || "").trim())
+      .filter(Boolean);
+  }
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map((c) => String(c || "").trim()).filter(Boolean);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+  }
+  const single = row.category != null ? String(row.category).trim() : "";
+  return single ? [single] : [];
+}
+
+function augmentStoreRow(row) {
+  if (!row) return row;
+  const categories = normalizeCategoriesFromRow(row);
+  const category = categories[0] || String(row.category || "servicos").trim() || "servicos";
+  return { ...row, categories, category };
+}
+
 class StoreRepository {
   constructor(db) {
     this.db = db;
   }
 
   async listStores() {
-    return this.db.all("SELECT * FROM stores ORDER BY id DESC");
+    const rows = await this.db.all("SELECT * FROM stores ORDER BY id DESC");
+    return rows.map(augmentStoreRow);
   }
 
   async getStoreById(id) {
-    return this.db.get("SELECT * FROM stores WHERE id = ?", id);
+    const row = await this.db.get("SELECT * FROM stores WHERE id = ?", id);
+    return augmentStoreRow(row);
   }
 
   async createStore(payload) {
     const inGastro = payload.showInGastronomy ? 1 : 0;
+    const categories = Array.isArray(payload.categories) ? payload.categories : [];
+    const primary = String(payload.category || categories[0] || "servicos").trim() || "servicos";
+    const categoriesJson = JSON.stringify(categories.length ? categories : [primary]);
     const result = await this.db.run(
-      `INSERT INTO stores (name, category, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, show_in_gastronomy, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      `INSERT INTO stores (name, category, categories, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, show_in_gastronomy, updated_at)
+       VALUES (?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       payload.name,
-      payload.category,
+      primary,
+      categoriesJson,
       payload.floor,
       payload.description,
       payload.imageUrl || null,
@@ -32,12 +70,16 @@ class StoreRepository {
 
   async updateStore(id, payload) {
     const inGastro = payload.showInGastronomy ? 1 : 0;
+    const categories = Array.isArray(payload.categories) ? payload.categories : [];
+    const primary = String(payload.category || categories[0] || "servicos").trim() || "servicos";
+    const categoriesJson = JSON.stringify(categories.length ? categories : [primary]);
     await this.db.run(
       `UPDATE stores
-       SET name = ?, category = ?, floor = ?, description = ?, image_url = ?, logo_url = ?, whatsapp_url = ?, instagram_url = ?, hours = ?, show_in_gastronomy = ?, updated_at = CURRENT_TIMESTAMP
+       SET name = ?, category = ?, categories = ?::jsonb, floor = ?, description = ?, image_url = ?, logo_url = ?, whatsapp_url = ?, instagram_url = ?, hours = ?, show_in_gastronomy = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
       payload.name,
-      payload.category,
+      primary,
+      categoriesJson,
       payload.floor,
       payload.description,
       payload.imageUrl || null,

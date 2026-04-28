@@ -99,38 +99,37 @@
                     Nome da loja
                     <input type="text" name="name" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
                 </label>
-                <label class="text-sm font-semibold text-slate-600">
-                    Categoria
-                    <select name="category" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
-                        <option value="">Selecione uma categoria</option>
-                        <option value="hortifruti">Hortifruti</option>
-                        <option value="gastronomia">Gastronomia</option>
-                        <option value="bebidas">Adega</option>
-                        <option value="servicos">Serviços</option>
-                        <option value="cafeteria">Cafeteria</option>
-                        <option value="doces">Doces e Sobremesas</option>
-                        <option value="padaria">Padaria e Confeitaria</option>
-                        <option value="acougue">Açougue</option>
-                        <option value="peixaria">Peixaria</option>
-                        <option value="emporio">Empório</option>
-                        <option value="queijaria">Queijaria</option>
-                        <option value="vinhos">Vinhos e Destilados</option>
-                        <option value="cervejaria">Cervejaria</option>
-                        <option value="restaurante">Restaurante</option>
-                        <option value="lanches">Lanches</option>
-                        <option value="saudavel">Saudável</option>
-                        <option value="floricultura">Floricultura</option>
-                        <option value="artesanato">Artesanato</option>
-                        <option value="presentes">Presentes</option>
-                        <option value="roupas">Roupas</option>
-                        <option value="acessorios">Acessórios</option>
-                        <option value="eletronico">Eletrônico</option>
-                        <option value="livros">Livros</option>
-                        <option value="musica">Música</option>
-                        <option value="filmes">Filmes</option>
-                        <option value="jogos">Games</option>
-                    </select>
-                </label>
+                <fieldset class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
+                    <legend class="text-sm font-semibold text-slate-600 px-1">Categorias <span class="font-normal text-slate-400">(marque uma ou mais)</span></legend>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="hortifruti" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Hortifruti</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="gastronomia" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Gastronomia</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="bebidas" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Adega</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="servicos" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Serviços</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="cafeteria" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Cafeteria</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="doces" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Doces e Sobremesas</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="padaria" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Padaria e Confeitaria</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="acougue" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Açougue</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="peixaria" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Peixaria</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="emporio" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Empório</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="queijaria" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Queijaria</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="vinhos" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Vinhos e Destilados</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="cervejaria" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Cervejaria</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="restaurante" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Restaurante</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="lanches" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Lanches</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="saudavel" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Saudável</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="floricultura" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Floricultura</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="artesanato" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Artesanato</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="presentes" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Presentes</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="roupas" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Roupas</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="acessorios" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Acessórios</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="eletronico" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Eletrônico</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="livros" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Livros</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="musica" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Música</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="filmes" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Filmes</span></label>
+                        <label class="flex items-center gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-xs cursor-pointer hover:border-marron/25"><input type="checkbox" name="categories" value="jogos" class="rounded border-slate-300 text-marron focus:ring-marron shrink-0"><span>Games</span></label>
+                    </div>
+                </fieldset>
                 <label class="text-sm font-semibold text-slate-600">
                     Piso / Localização
                     <input type="text" name="floor" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">

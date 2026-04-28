@@ -421,12 +421,18 @@ async function syncVisualCatalog(db) {
   try {
     await db.run("DELETE FROM stores");
     for (const store of VISUAL_STORES) {
-      const inGastro = store.category === "gastronomia" ? 1 : 0;
+      const categories = Array.isArray(store.categories) && store.categories.length
+        ? store.categories
+        : [store.category].filter(Boolean);
+      const primary = categories[0] || store.category || "servicos";
+      const inGastro = categories.includes("gastronomia") ? 1 : 0;
+      const categoriesJson = JSON.stringify(categories);
       await db.run(
-        `INSERT INTO stores (name, category, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, show_in_gastronomy, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        `INSERT INTO stores (name, category, categories, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, show_in_gastronomy, updated_at)
+         VALUES (?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         store.name,
-        store.category,
+        primary,
+        categoriesJson,
         store.floor,
         store.description,
         store.image_url,
@@ -486,6 +492,7 @@ async function initDb() {
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       category TEXT NOT NULL,
+      categories JSONB DEFAULT '[]'::jsonb,
       floor TEXT NOT NULL,
       description TEXT NOT NULL,
       image_url TEXT,
@@ -530,6 +537,15 @@ async function initDb() {
   await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS hours TEXT");
   await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS logo_url TEXT");
   await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS show_in_gastronomy INTEGER DEFAULT 0");
+  await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS categories JSONB DEFAULT '[]'::jsonb");
+  await db.exec(`
+    UPDATE stores
+    SET categories = jsonb_build_array(category)
+    WHERE categories IS NULL
+       OR categories = '[]'::jsonb
+       OR jsonb_typeof(categories) <> 'array'
+       OR jsonb_array_length(COALESCE(categories, '[]'::jsonb)) = 0
+  `);
 
   const admin = await db.get("SELECT id FROM admins WHERE email = ?", "admin@mercado.local");
   if (!admin) {
