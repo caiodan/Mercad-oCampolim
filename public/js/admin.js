@@ -266,14 +266,44 @@ function formatAdminEventRecurrence(event) {
   return "Periodo continuo";
 }
 
+function getEventImagesFromRecord(event) {
+  let images = [];
+  if (Array.isArray(event.images)) {
+    images = event.images;
+  } else if (typeof event.images === "string") {
+    try {
+      const parsed = JSON.parse(event.images);
+      images = Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+      images = [];
+    }
+  }
+  const normalized = images.map((item) => String(item || "").trim()).filter(Boolean);
+  const cover = String(event.image_url || "").trim();
+  if (cover && !normalized.includes(cover)) {
+    normalized.unshift(cover);
+  }
+  return normalized;
+}
+
 function formatAdminEventPeriodLine(event) {
   const start = String(event.period_start || "").trim();
   const end = String(event.period_end || "").trim();
   if (!start && !end) return "Data a confirmar";
   const toBr = (value) => {
-    const parts = String(value || "").split("-");
-    if (parts.length !== 3) return value || "";
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      return `${day}/${month}/${year}`;
+    }
+    const dt = new Date(raw);
+    if (Number.isNaN(dt.getTime())) return raw;
+    const day = String(dt.getDate()).padStart(2, "0");
+    const month = String(dt.getMonth() + 1).padStart(2, "0");
+    const year = String(dt.getFullYear());
+    return `${day}/${month}/${year}`;
   };
   return `Inicio: ${toBr(start || end)} · Fim: ${toBr(end || start)}`;
 }
@@ -439,18 +469,7 @@ function createAdminCard(store) {
 }
 
 function createAdminEventCard(event) {
-  const eventImages = (() => {
-    if (Array.isArray(event.images)) return event.images;
-    if (typeof event.images === "string") {
-      try {
-        const parsed = JSON.parse(event.images);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (_error) {
-        return [];
-      }
-    }
-    return [];
-  })();
+  const eventImages = getEventImagesFromRecord(event);
   const photoCount = eventImages.length || (event.image_url ? 1 : 0);
   const recurrenceLabelMap = {
     none: "Periodo continuo",
@@ -494,7 +513,7 @@ function createAdminEventCard(event) {
       setEventSpecificDates(Array.isArray(event.specific_dates) ? event.specific_dates : []);
       syncEventRecurrenceOptions();
       eventForm.elements.description.value = event.description;
-      eventForm.elements.imageUrl.value = event.image_url || "";
+      eventForm.elements.imageUrl.value = eventImages[0] || event.image_url || "";
       eventForm.elements.imageUrls.value = JSON.stringify(eventImages);
       clearEventGalleryExtraInputs();
       setEventExistingPhotos(eventImages);
@@ -872,8 +891,8 @@ eventForm.addEventListener("submit", async (event) => {
       clearEventGalleryExtraInputs();
     }
 
-    if (coverUrl && !galleryUrls.includes(coverUrl)) {
-      galleryUrls.unshift(coverUrl);
+    if (coverUrl) {
+      galleryUrls = [coverUrl, ...galleryUrls.filter((url) => String(url).trim() !== coverUrl)];
     }
     if (!coverUrl && galleryUrls.length) {
       coverUrl = galleryUrls[0];

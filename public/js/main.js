@@ -356,50 +356,44 @@ function renderEvents() {
     selectedEventImageIndex = 0;
   }
   const activeImage = selected.images[selectedEventImageIndex] || selected.image_url;
-  const otherEvents = sortedEvents.filter((event) => Number(event.id) !== Number(selected.id));
+  const otherEvents = sortedEvents
+    .filter((event) => Number(event.id) !== Number(selected.id))
+    .slice(0, 2);
 
   eventHighlight.innerHTML = `
-    <article class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-[#eddcd2]">
-      <div class="relative h-[300px] sm:h-[380px] lg:h-[460px] overflow-hidden bg-slate-100">
-        <img src="${activeImage || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover" alt="${selected.title}">
-      </div>
-      <div class="p-6 lg:p-8 space-y-5">
-        <div class="flex flex-wrap items-center gap-3">
-          <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">${selected.event_date || "Data a confirmar"}</span>
-          ${selected.highlight ? '<span class="rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-amber-700">Destaque</span>' : ""}
-          <span class="rounded-full border border-slate-200 px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-slate-500">${selected.images.length} foto(s)</span>
+    <div data-event-id="${selected.id}" class="group relative event-card-large bg-white rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer">
+      <img src="${activeImage || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt="${selected.title}">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-transparent flex flex-col justify-end p-10 lg:p-16">
+        <div class="flex items-center gap-4 text-amber-400 mb-4">
+          <span class="px-4 py-1 rounded-full border border-amber-400/30 bg-amber-400/10 text-[10px] font-bold uppercase tracking-widest">Destaque do Mes</span>
+          <span class="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><i data-lucide="calendar" class="w-3 h-3"></i> ${selected.event_date || "Data a confirmar"}</span>
         </div>
-        <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-400">${formatEventRecurrenceText(selected)}</p>
-        <h4 class="text-3xl lg:text-4xl font-serif italic text-slate-900 leading-tight line-clamp-1">${selected.title}</h4>
-        <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-500">${formatEventPeriodLine(selected)}</p>
-        <p class="text-slate-500 text-sm lg:text-base leading-relaxed">${selected.description}</p>
+        <h4 class="text-4xl lg:text-5xl font-serif italic text-white mb-6">${selected.title}</h4>
+        <p class="text-white/70 text-lg max-w-xl leading-relaxed mb-8">${selected.description}</p>
         <div class="grid grid-cols-4 sm:grid-cols-6 gap-2 lg:gap-3" id="event-gallery-thumbs">
           ${selected.images
             .map(
-              (url, idx) => `<button type="button" data-event-thumb-index="${idx}" class="group relative overflow-hidden rounded-xl border ${idx === selectedEventImageIndex ? "border-marron" : "border-slate-200"}">
+              (url, idx) => `<button type="button" data-event-thumb-index="${idx}" class="group relative overflow-hidden rounded-xl border ${idx === selectedEventImageIndex ? "border-amber-300" : "border-white/30"}">
                 <img src="${url}" alt="Foto ${idx + 1} do evento ${selected.title}" class="w-full h-16 object-cover group-hover:scale-105 transition-transform">
               </button>`
             )
             .join("")}
         </div>
       </div>
-    </article>
+    </div>
   `;
 
   otherEvents.forEach((event) => {
     const card = document.createElement("div");
     card.dataset.eventId = String(event.id ?? "");
-    const isActive = Number(event.id) === Number(selectedEventId);
-    card.className = `group flex-1 bg-white rounded-[2.5rem] overflow-hidden shadow-sm transition-all cursor-pointer flex flex-col sm:flex-row lg:flex-col xl:flex-row border ${isActive ? "border-marron" : "border-transparent hover:shadow-xl"}`;
+    card.className = "group flex-1 bg-white rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col sm:flex-row lg:flex-col xl:flex-row";
     card.innerHTML = `
       <div class="sm:w-1/3 lg:w-full xl:w-1/3 h-48 sm:h-full lg:h-48 xl:h-full relative overflow-hidden">
         <img src="${(event.images && event.images[0]) || event.image_url || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="${event.title}">
       </div>
       <div class="flex-1 p-8 flex flex-col justify-center">
         <span class="text-[9px] font-bold text-amber-600 uppercase tracking-[0.2em] mb-2">${event.event_date}</span>
-        <h5 class="text-xl font-serif italic text-slate-900 group-hover:text-marron transition-colors mb-2 leading-tight line-clamp-1">${event.title}</h5>
-        <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-2">${formatEventPeriodLine(event)}</p>
-        <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">${formatEventRecurrenceText(event)}</p>
+        <h5 class="text-xl font-serif italic text-slate-900 group-hover:text-marron transition-colors mb-2 leading-tight">${event.title}</h5>
         <p class="text-xs text-slate-500 line-clamp-2">${event.description}</p>
       </div>
     `;
@@ -520,9 +514,19 @@ function formatEventPeriodLine(event) {
   const end = String(event.period_end || "").trim();
   if (!start && !end) return "Data a confirmar";
   const toBr = (value) => {
-    const parts = String(value || "").split("-");
-    if (parts.length !== 3) return value || "";
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      return `${day}/${month}/${year}`;
+    }
+    const dt = new Date(raw);
+    if (Number.isNaN(dt.getTime())) return raw;
+    const day = String(dt.getDate()).padStart(2, "0");
+    const month = String(dt.getMonth() + 1).padStart(2, "0");
+    const year = String(dt.getFullYear());
+    return `${day}/${month}/${year}`;
   };
   return `Inicio: ${toBr(start || end)} · Fim: ${toBr(end || start)}`;
 }
