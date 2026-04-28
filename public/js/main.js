@@ -69,12 +69,20 @@ const fullCalendarGrid = document.getElementById("full-calendar-grid");
 const openCalendarBtn = document.getElementById("open-calendar-btn");
 const backToEventsBtn = document.getElementById("back-to-events-btn");
 const backFromEventDetailBtn = document.getElementById("back-from-event-detail-btn");
+const eventFilterStartInput = document.getElementById("event-filter-start");
+const eventFilterEndInput = document.getElementById("event-filter-end");
+const eventFilterApplyBtn = document.getElementById("event-filter-apply-btn");
+const eventFilterClearBtn = document.getElementById("event-filter-clear-btn");
 const gastronomyState = document.getElementById("gastronomy-state");
 const gastronomyTrack = document.getElementById("gastronomy-track");
 const sectionsToAnimate = document.querySelectorAll(".section-enter");
 let eventLightboxImages = [];
 let eventLightboxIndex = 0;
 let eventLightboxTouchStartX = null;
+const eventCalendarFiltersState = {
+  start: "",
+  end: ""
+};
 
 /** Capa quando a loja nao tem URL valida ou a imagem externa falha ao carregar. */
 const DEFAULT_STORE_IMAGE_URL =
@@ -498,6 +506,38 @@ function parseEventDate(eventDate) {
   return new Date(year, month, day);
 }
 
+function normalizeDateOnly(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const dateOnlyMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return `${year}-${month}-${day}`;
+  }
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) return "";
+  const year = String(dt.getFullYear());
+  const month = String(dt.getMonth() + 1).padStart(2, "0");
+  const day = String(dt.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function eventMatchesCalendarDateFilters(event) {
+  const filterStart = String(eventCalendarFiltersState.start || "").trim();
+  const filterEnd = String(eventCalendarFiltersState.end || "").trim();
+  if (!filterStart && !filterEnd) return true;
+
+  const eventStart = normalizeDateOnly(event.period_start || event.period_end);
+  const eventEnd = normalizeDateOnly(event.period_end || event.period_start);
+  if (!eventStart && !eventEnd) return true;
+
+  const rangeStart = eventStart || eventEnd;
+  const rangeEnd = eventEnd || eventStart;
+  if (filterStart && rangeEnd < filterStart) return false;
+  if (filterEnd && rangeStart > filterEnd) return false;
+  return true;
+}
+
 function normalizeEventPayload(event) {
   let imageSource = Array.isArray(event.images) ? event.images : [];
   if (!imageSource.length && typeof event.images === "string") {
@@ -842,7 +882,13 @@ function renderGastronomy() {
 
 function renderFullCalendar() {
   fullCalendarGrid.innerHTML = "";
-  const sortedEvents = [...events].sort((a, b) => compareEventsByDate(a, b));
+  const sortedEvents = [...events]
+    .sort((a, b) => compareEventsByDate(a, b))
+    .filter((event) => eventMatchesCalendarDateFilters(event));
+  if (!sortedEvents.length) {
+    fullCalendarGrid.innerHTML = '<p class="text-sm text-slate-500 md:col-span-2 xl:col-span-3">Nenhum evento encontrado para o filtro de datas selecionado.</p>';
+    return;
+  }
   sortedEvents.forEach((event) => {
     const card = document.createElement("article");
     card.dataset.eventId = String(event.id ?? "");
@@ -1280,6 +1326,39 @@ openCalendarBtn.addEventListener("click", showCalendarView);
 backToEventsBtn.addEventListener("click", showPreviewView);
 if (backFromEventDetailBtn) {
   backFromEventDetailBtn.addEventListener("click", showPreviewView);
+}
+function applyEventCalendarFiltersFromInputs() {
+  if (eventFilterStartInput instanceof HTMLInputElement) {
+    eventCalendarFiltersState.start = eventFilterStartInput.value || "";
+  }
+  if (eventFilterEndInput instanceof HTMLInputElement) {
+    eventCalendarFiltersState.end = eventFilterEndInput.value || "";
+  }
+  if (!eventsCalendarView.classList.contains("hidden")) {
+    renderFullCalendar();
+  }
+}
+
+if (eventFilterApplyBtn) {
+  eventFilterApplyBtn.addEventListener("click", applyEventCalendarFiltersFromInputs);
+}
+
+function clearEventCalendarFilters() {
+  eventCalendarFiltersState.start = "";
+  eventCalendarFiltersState.end = "";
+  if (eventFilterStartInput instanceof HTMLInputElement) {
+    eventFilterStartInput.value = "";
+  }
+  if (eventFilterEndInput instanceof HTMLInputElement) {
+    eventFilterEndInput.value = "";
+  }
+  if (!eventsCalendarView.classList.contains("hidden")) {
+    renderFullCalendar();
+  }
+}
+
+if (eventFilterClearBtn) {
+  eventFilterClearBtn.addEventListener("click", clearEventCalendarFilters);
 }
 
 window.addEventListener("resize", () => {
