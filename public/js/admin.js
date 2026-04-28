@@ -14,13 +14,14 @@ const cancelEventEditBtn = document.getElementById("cancelEventEditBtn");
 const openEventFormBtn = document.getElementById("openEventFormBtn");
 const closeEventModalBtn = document.getElementById("closeEventModalBtn");
 const adminEditModalBackdrop = document.getElementById("adminEditModalBackdrop");
-const addEventPhotoInputBtn = document.getElementById("addEventPhotoInputBtn");
 const eventGalleryExtraInputs = document.getElementById("eventGalleryExtraInputs");
 const eventExistingPhotos = document.getElementById("eventExistingPhotos");
 const eventExistingPhotosText = document.getElementById("eventExistingPhotosText");
 const eventExistingPhotosGrid = document.getElementById("eventExistingPhotosGrid");
 const eventCurrentCoverPreview = document.getElementById("eventCurrentCoverPreview");
 const eventCurrentCoverImage = document.getElementById("eventCurrentCoverImage");
+const eventCoverCtaText = document.getElementById("eventCoverCtaText");
+const eventGalleryCtaText = document.getElementById("eventGalleryCtaText");
 const eventWeeklyOptions = document.getElementById("eventWeeklyOptions");
 const eventSpecificDatesOptions = document.getElementById("eventSpecificDatesOptions");
 const addSpecificDateBtn = document.getElementById("addSpecificDateBtn");
@@ -324,6 +325,13 @@ function setEventDraftImages(images) {
     .map((item) => String(item || "").trim())
     .filter(Boolean);
   eventDraftImages = normalized;
+  const hasCurrentImages = eventDraftImages.length > 0;
+  if (eventCoverCtaText) {
+    eventCoverCtaText.textContent = hasCurrentImages ? "Trocar capa" : "Clique para escolher a capa";
+  }
+  if (eventGalleryCtaText) {
+    eventGalleryCtaText.textContent = hasCurrentImages ? "Adicionar mais fotos" : "Selecionar varias de uma vez";
+  }
   eventForm.elements.imageUrls.value = JSON.stringify(eventDraftImages);
   eventForm.elements.imageUrl.value = eventDraftImages[0] || "";
   setEventCurrentCover(eventForm.elements.imageUrl.value);
@@ -940,6 +948,7 @@ openStoreFormBtn.addEventListener("click", () => {
     resetForm();
     return;
   }
+  openEditModal(storeForm);
   openStoreForm();
 });
 
@@ -1141,15 +1150,11 @@ openEventFormBtn.addEventListener("click", () => {
     resetEventForm();
     return;
   }
+  openEditModal(eventForm);
   openEventForm();
   syncEventRecurrenceOptions();
   setEventDraftImages([]);
 });
-if (addEventPhotoInputBtn) {
-  addEventPhotoInputBtn.addEventListener("click", () => {
-    addEventGalleryExtraInput();
-  });
-}
 if (eventForm.elements.recurrenceType) {
   eventForm.elements.recurrenceType.addEventListener("change", () => {
     syncEventRecurrenceOptions();

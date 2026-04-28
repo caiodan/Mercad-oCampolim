@@ -19,14 +19,13 @@ function normalizeCategoriesFromRow(row) {
       /* ignore */
     }
   }
-  const single = row.category != null ? String(row.category).trim() : "";
-  return single ? [single] : [];
+  return [];
 }
 
 function augmentStoreRow(row) {
   if (!row) return row;
   const categories = normalizeCategoriesFromRow(row);
-  const category = categories[0] || String(row.category || "servicos").trim() || "servicos";
+  const category = categories[0] || "servicos";
   return { ...row, categories, category };
 }
 
@@ -48,13 +47,11 @@ class StoreRepository {
   async createStore(payload) {
     const inGastro = payload.showInGastronomy ? 1 : 0;
     const categories = Array.isArray(payload.categories) ? payload.categories : [];
-    const primary = String(payload.category || categories[0] || "servicos").trim() || "servicos";
-    const categoriesJson = JSON.stringify(categories.length ? categories : [primary]);
+    const categoriesJson = JSON.stringify(categories);
     const result = await this.db.run(
-      `INSERT INTO stores (name, category, categories, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, show_in_gastronomy, updated_at)
-       VALUES (?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      `INSERT INTO stores (name, categories, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, show_in_gastronomy, updated_at)
+       VALUES (?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       payload.name,
-      primary,
       categoriesJson,
       payload.floor,
       payload.description,
@@ -71,14 +68,12 @@ class StoreRepository {
   async updateStore(id, payload) {
     const inGastro = payload.showInGastronomy ? 1 : 0;
     const categories = Array.isArray(payload.categories) ? payload.categories : [];
-    const primary = String(payload.category || categories[0] || "servicos").trim() || "servicos";
-    const categoriesJson = JSON.stringify(categories.length ? categories : [primary]);
+    const categoriesJson = JSON.stringify(categories);
     await this.db.run(
       `UPDATE stores
-       SET name = ?, category = ?, categories = ?::jsonb, floor = ?, description = ?, image_url = ?, logo_url = ?, whatsapp_url = ?, instagram_url = ?, hours = ?, show_in_gastronomy = ?, updated_at = CURRENT_TIMESTAMP
+       SET name = ?, categories = ?::jsonb, floor = ?, description = ?, image_url = ?, logo_url = ?, whatsapp_url = ?, instagram_url = ?, hours = ?, show_in_gastronomy = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,
       payload.name,
-      primary,
       categoriesJson,
       payload.floor,
       payload.description,

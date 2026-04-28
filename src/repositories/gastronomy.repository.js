@@ -6,7 +6,14 @@ class GastronomyRepository {
   async listItems() {
     return this.db.all(
       `SELECT id, name,
-              COALESCE(categories #>> '{0}', category) AS cuisine_type,
+              COALESCE(
+                NULLIF((
+                  SELECT string_agg(item, ' · ')
+                  FROM jsonb_array_elements_text(COALESCE(categories, '[]'::jsonb)) AS item
+                ), ''),
+                'Sem categoria'
+              ) AS cuisine_type,
+              categories,
               floor AS location, description, image_url
        FROM stores
        WHERE COALESCE(show_in_gastronomy, 0) = 1

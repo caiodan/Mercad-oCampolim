@@ -424,14 +424,12 @@ async function syncVisualCatalog(db) {
       const categories = Array.isArray(store.categories) && store.categories.length
         ? store.categories
         : [store.category].filter(Boolean);
-      const primary = categories[0] || store.category || "servicos";
       const inGastro = categories.includes("gastronomia") ? 1 : 0;
-      const categoriesJson = JSON.stringify(categories);
+      const categoriesJson = JSON.stringify(categories.length ? categories : ["servicos"]);
       await db.run(
-        `INSERT INTO stores (name, category, categories, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, show_in_gastronomy, updated_at)
-         VALUES (?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        `INSERT INTO stores (name, categories, floor, description, image_url, logo_url, whatsapp_url, instagram_url, hours, show_in_gastronomy, updated_at)
+         VALUES (?, ?::jsonb, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         store.name,
-        primary,
         categoriesJson,
         store.floor,
         store.description,
@@ -500,7 +498,6 @@ async function initDb() {
     CREATE TABLE IF NOT EXISTS stores (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
-      category TEXT NOT NULL,
       categories JSONB DEFAULT '[]'::jsonb,
       floor TEXT NOT NULL,
       description TEXT NOT NULL,
@@ -560,12 +557,24 @@ async function initDb() {
   await db.exec("ALTER TABLE events ADD COLUMN IF NOT EXISTS weekdays JSONB DEFAULT '[]'::jsonb");
   await db.exec("ALTER TABLE events ADD COLUMN IF NOT EXISTS specific_dates JSONB DEFAULT '[]'::jsonb");
   await db.exec(`
-    UPDATE stores
-    SET categories = jsonb_build_array(category)
-    WHERE categories IS NULL
-       OR categories = '[]'::jsonb
-       OR jsonb_typeof(categories) <> 'array'
-       OR jsonb_array_length(COALESCE(categories, '[]'::jsonb)) = 0
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'stores' AND column_name = 'category'
+      ) THEN
+        UPDATE stores
+        SET categories = jsonb_build_array(category)
+        WHERE categories IS NULL
+          OR categories = '[]'::jsonb
+          OR jsonb_typeof(categories) <> 'array'
+          OR jsonb_array_length(COALESCE(categories, '[]'::jsonb)) = 0;
+
+        ALTER TABLE stores DROP COLUMN category;
+      END IF;
+    END
+    $$;
   `);
   await db.exec(`
     UPDATE events

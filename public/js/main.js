@@ -159,7 +159,9 @@ function normalizeStore(store) {
 
 function renderStores() {
   storeGrid.innerHTML = "";
-  const filtered = stores.filter((store) => matchStoreFilters(store));
+  const filtered = stores
+    .filter((store) => matchStoreFilters(store))
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "pt-BR", { sensitivity: "base" }));
   const visibleStores = isShowingAllStores ? filtered : filtered.slice(0, INITIAL_STORE_LIMIT);
 
   visibleStores.forEach((store) => {
@@ -378,6 +380,21 @@ function renderEvents() {
     .filter((event) => Number(event.id) !== Number(selected.id))
     .slice(0, 2);
 
+  const totalEvents = sortedEvents.length;
+  if (totalEvents <= 1) {
+    eventsPreview.className = "grid grid-cols-1 gap-8";
+    eventHighlight.className = "";
+    eventList.className = "hidden";
+  } else if (totalEvents === 2) {
+    eventsPreview.className = "grid grid-cols-1 lg:grid-cols-2 gap-8";
+    eventHighlight.className = "";
+    eventList.className = "flex";
+  } else {
+    eventsPreview.className = "grid grid-cols-1 lg:grid-cols-12 gap-8";
+    eventHighlight.className = "lg:col-span-7";
+    eventList.className = "lg:col-span-5 flex flex-col gap-8";
+  }
+
   eventHighlight.innerHTML = `
     <div data-event-id="${selected.id}" class="group relative event-card-large bg-white rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer">
       <img src="${activeImage || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt="${selected.title}">
@@ -403,6 +420,25 @@ function renderEvents() {
       </div>
     </div>
   `;
+
+  if (totalEvents === 2 && otherEvents.length) {
+    const second = otherEvents[0];
+    eventList.innerHTML = `
+      <div data-event-id="${second.id}" class="group relative event-card-large bg-white rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer">
+        <img src="${(second.images && second.images[0]) || second.image_url || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt="${second.title}">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex flex-col justify-end p-5 sm:p-8 lg:p-10">
+          <div class="flex items-center gap-4 text-amber-400 mb-4">
+            <span class="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><i data-lucide="calendar" class="w-3 h-3"></i> ${second.event_date || "Data a confirmar"}</span>
+          </div>
+          <h4 class="text-3xl sm:text-4xl font-serif italic text-white mb-4 sm:mb-6">${second.title}</h4>
+          <p class="text-white/75 text-base sm:text-lg max-w-xl leading-relaxed whitespace-pre-line line-clamp-4">${second.description}</p>
+        </div>
+      </div>
+    `;
+    eventState.textContent = `${events.length} evento(s) exibido(s).`;
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
 
   otherEvents.forEach((event) => {
     const card = document.createElement("div");

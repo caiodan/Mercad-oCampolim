@@ -7,14 +7,11 @@ class StoreService {
     return this.storeRepository.listStores();
   }
 
-  /** Monta lista deduplicada a partir de categories[] ou category legado. */
+  /** Monta lista deduplicada a partir de categories[]. */
   normalizeCategories(payload) {
     let list = [];
     if (Array.isArray(payload.categories)) {
       list = payload.categories.map((c) => String(c || "").trim()).filter(Boolean);
-    }
-    if (!list.length && payload.category) {
-      list = [String(payload.category).trim()].filter(Boolean);
     }
     const seen = new Set();
     const out = [];
@@ -49,11 +46,9 @@ class StoreService {
 
   buildStoreWritePayload(payload) {
     const categories = this.normalizeCategories(payload);
-    const category = categories[0] || "servicos";
     return {
       ...payload,
-      categories,
-      category
+      categories
     };
   }
 
