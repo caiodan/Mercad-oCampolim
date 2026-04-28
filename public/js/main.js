@@ -2,6 +2,7 @@ let stores = [];
 let events = [];
 let gastronomyItems = [];
 const INITIAL_STORE_LIMIT = 12;
+const INITIAL_STORE_LIMIT_MOBILE = 6;
 const EVENT_PREVIEW_THUMB_LIMIT = 4;
 const EVENT_PREVIEW_THUMB_LIMIT_MOBILE = 3;
 let isShowingAllStores = false;
@@ -159,10 +160,11 @@ function normalizeStore(store) {
 
 function renderStores() {
   storeGrid.innerHTML = "";
+  const initialLimit = window.matchMedia("(max-width: 768px)").matches ? INITIAL_STORE_LIMIT_MOBILE : INITIAL_STORE_LIMIT;
   const filtered = stores
     .filter((store) => matchStoreFilters(store))
     .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "pt-BR", { sensitivity: "base" }));
-  const visibleStores = isShowingAllStores ? filtered : filtered.slice(0, INITIAL_STORE_LIMIT);
+  const visibleStores = isShowingAllStores ? filtered : filtered.slice(0, initialLimit);
 
   visibleStores.forEach((store) => {
     const card = document.createElement("div");
@@ -216,14 +218,14 @@ function renderStores() {
     card.style.setProperty("--store-enter-delay", `${Math.min(index * 40, 280)}ms`);
   });
 
-  if (filtered.length > INITIAL_STORE_LIMIT) {
+  if (filtered.length > initialLimit) {
     toggleStoresBtn.classList.remove("hidden");
     toggleStoresBtn.textContent = isShowingAllStores ? "Ver menos lojas" : "Ver todas as lojas";
   } else {
     toggleStoresBtn.classList.add("hidden");
   }
 
-  stateBox.textContent = isShowingAllStores || filtered.length <= INITIAL_STORE_LIMIT
+  stateBox.textContent = isShowingAllStores || filtered.length <= initialLimit
     ? `${visibleStores.length} loja(s) exibida(s).`
     : `${visibleStores.length} de ${filtered.length} loja(s) exibida(s).`;
   if (window.lucide) window.lucide.createIcons();
