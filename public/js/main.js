@@ -323,9 +323,9 @@ function selectHighlightEvent(sortedEvents) {
 }
 
 /** px/s — ritmo bem lento em qualquer largura */
-const GASTRONOMY_MARQUEE_BASE_MS_PER_SET = 26000;
-const GASTRONOMY_MARQUEE_MIN_PX_PER_SEC = 28;
-const GASTRONOMY_MARQUEE_MAX_PX_PER_SEC = 72;
+const GASTRONOMY_MARQUEE_BASE_MS_PER_SET = 21000;
+const GASTRONOMY_MARQUEE_MIN_PX_PER_SEC = 36;
+const GASTRONOMY_MARQUEE_MAX_PX_PER_SEC = 90;
 
 function gastronomyMarqueeSpeedPxPerMs(oneSetWidthPx) {
   const ideal = oneSetWidthPx / GASTRONOMY_MARQUEE_BASE_MS_PER_SET;
