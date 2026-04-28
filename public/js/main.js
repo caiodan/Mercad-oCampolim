@@ -4,7 +4,32 @@ let gastronomyItems = [];
 const INITIAL_STORE_LIMIT = 12;
 let isShowingAllStores = false;
 let currentStoreFilter = "all";
-let _gastronomyMarqueeRAF = null;
+let _gastronomyMarqueeTickRAF = null;
+let _gastronomyMarqueeSetupRAF = null;
+let _gastronomyResizeObserver = null;
+let _gastronomyMarqueeAbort = null;
+/** Invalida callbacks de RAF aninhados que cancelAnimationFrame não alcança */
+let _gastronomyMarqueeGen = 0;
+
+function teardownGastronomyMarquee() {
+  _gastronomyMarqueeGen++;
+  if (_gastronomyMarqueeTickRAF !== null) {
+    cancelAnimationFrame(_gastronomyMarqueeTickRAF);
+    _gastronomyMarqueeTickRAF = null;
+  }
+  if (_gastronomyMarqueeSetupRAF !== null) {
+    cancelAnimationFrame(_gastronomyMarqueeSetupRAF);
+    _gastronomyMarqueeSetupRAF = null;
+  }
+  if (_gastronomyResizeObserver) {
+    _gastronomyResizeObserver.disconnect();
+    _gastronomyResizeObserver = null;
+  }
+  if (_gastronomyMarqueeAbort) {
+    _gastronomyMarqueeAbort.abort();
+    _gastronomyMarqueeAbort = null;
+  }
+}
 
 const stateBox = document.getElementById("stateBox");
 const storeGrid = document.getElementById("store-grid");
@@ -298,22 +323,14 @@ function selectHighlightEvent(sortedEvents) {
 }
 
 /**
- * Animação de marquee baseada em requestAnimationFrame com pixels reais.
- * Substitui o keyframe CSS `calc(-100% / 3)` que é instável no iOS Safari
- * quando o elemento possui width:max-content — o browser usa a largura do
- * container como referência para %, quebrando o loop seamless.
- *
- * Estratégia:
- *  - 3 cópias idênticas no DOM → oneSetWidth = track.scrollWidth / 3
- *  - Avança position por tempo decorrido (timestamp-based, frame-rate agnóstico)
- *  - Quando position ≤ -oneSetWidth, reposiciona em 0 (wrap seamless)
- *  - Respeita document.hidden para não consumir CPU em abas ocultas
+ * Marquee em requestAnimationFrame + largura medida em pixels.
+ * No primeiro paint (e em reload com cache), scrollWidth costuma vir antes
+ * das imagens — oneSetWidth ficava errado e o loop “quebrava”. Por isso:
+ *  - remedição contínua via ResizeObserver + load/error nas imgs
+ *  - ao mudar a largura, escala position para manter continuidade visual
  */
 function startGastronomyMarquee(track) {
-  if (_gastronomyMarqueeRAF !== null) {
-    cancelAnimationFrame(_gastronomyMarqueeRAF);
-    _gastronomyMarqueeRAF = null;
-  }
+  const gen = _gastronomyMarqueeGen;
 
   track.style.willChange = "transform";
 
@@ -322,9 +339,51 @@ function startGastronomyMarquee(track) {
   let lastTimestamp = null;
   let oneSetWidth = 0;
 
+  function updateMetrics() {
+    if (gen !== _gastronomyMarqueeGen) return;
+    const sw = track.scrollWidth;
+    const next = sw / 3;
+    if (!Number.isFinite(next) || next <= 0) return;
+    const prev = oneSetWidth;
+    oneSetWidth = next;
+    if (prev > 0 && Math.abs(next - prev) > 1) {
+      position = (position / prev) * next;
+    }
+    track.style.transform = "translateX(" + position.toFixed(3) + "px)";
+  }
+
+  _gastronomyMarqueeAbort = new AbortController();
+  const { signal } = _gastronomyMarqueeAbort;
+
+  track.querySelectorAll("img").forEach((img) => {
+    img.addEventListener("load", updateMetrics, { signal });
+    img.addEventListener("error", updateMetrics, { signal });
+    if (img.complete) {
+      if (typeof img.decode === "function") {
+        img.decode().then(updateMetrics, updateMetrics);
+      } else {
+        requestAnimationFrame(updateMetrics);
+      }
+    }
+  });
+
+  if (typeof ResizeObserver !== "undefined") {
+    _gastronomyResizeObserver = new ResizeObserver(() => {
+      updateMetrics();
+    });
+    _gastronomyResizeObserver.observe(track);
+  }
+
+  if (document.readyState === "complete") {
+    requestAnimationFrame(updateMetrics);
+  } else {
+    window.addEventListener("load", updateMetrics, { signal, once: true });
+  }
+
   function tick(timestamp) {
+    if (gen !== _gastronomyMarqueeGen) return;
     if (lastTimestamp === null) lastTimestamp = timestamp;
-    const elapsed = Math.min(timestamp - lastTimestamp, 64); // cap a 2 frames para evitar salto em tabs reativadas
+    const elapsed = Math.min(timestamp - lastTimestamp, 64);
     lastTimestamp = timestamp;
 
     if (!document.hidden && oneSetWidth > 0) {
@@ -335,21 +394,23 @@ function startGastronomyMarquee(track) {
       track.style.transform = "translateX(" + position.toFixed(3) + "px)";
     }
 
-    _gastronomyMarqueeRAF = requestAnimationFrame(tick);
+    _gastronomyMarqueeTickRAF = requestAnimationFrame(tick);
   }
 
-  // Medir após um frame para garantir que o layout já foi calculado
-  requestAnimationFrame(function () {
-    oneSetWidth = track.scrollWidth / 3;
-    _gastronomyMarqueeRAF = requestAnimationFrame(tick);
+  _gastronomyMarqueeSetupRAF = requestAnimationFrame(function () {
+    if (gen !== _gastronomyMarqueeGen) return;
+    updateMetrics();
+    requestAnimationFrame(function () {
+      if (gen !== _gastronomyMarqueeGen) return;
+      updateMetrics();
+      _gastronomyMarqueeSetupRAF = null;
+      _gastronomyMarqueeTickRAF = requestAnimationFrame(tick);
+    });
   });
 }
 
 function renderGastronomy() {
-  if (_gastronomyMarqueeRAF !== null) {
-    cancelAnimationFrame(_gastronomyMarqueeRAF);
-    _gastronomyMarqueeRAF = null;
-  }
+  teardownGastronomyMarquee();
   gastronomyTrack.innerHTML = "";
   gastronomyTrack.style.transform = "";
   gastronomyTrack.style.willChange = "";
