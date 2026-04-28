@@ -3,7 +3,12 @@ let events = [];
 let gastronomyItems = [];
 const INITIAL_STORE_LIMIT = 12;
 let isShowingAllStores = false;
-let currentStoreFilter = "all";
+const storeFiltersState = {
+  categories: [],
+  search: "",
+  hoursStart: "",
+  hoursEnd: ""
+};
 let _gastronomyMarqueeTickRAF = null;
 let _gastronomyMarqueeSetupRAF = null;
 let _gastronomyResizeObserver = null;
@@ -34,7 +39,14 @@ function teardownGastronomyMarquee() {
 const stateBox = document.getElementById("stateBox");
 const storeGrid = document.getElementById("store-grid");
 const modal = document.getElementById("store-modal");
-const categoryFilters = document.getElementById("category-filters");
+const storeCategoryDropdown = document.getElementById("store-filter-category-dropdown");
+const storeCategoryToggle = document.getElementById("store-filter-category-toggle");
+const storeCategoryLabel = document.getElementById("store-filter-category-label");
+const storeCategoryMenu = document.getElementById("store-filter-category-menu");
+const storeCategoryOptions = document.getElementById("store-filter-category-options");
+const storeSearchInput = document.getElementById("store-filter-search");
+const storeHoursStartInput = document.getElementById("store-filter-hours-start");
+const storeHoursEndInput = document.getElementById("store-filter-hours-end");
 const toggleStoresBtn = document.getElementById("toggle-stores-btn");
 const eventState = document.getElementById("event-state");
 const eventHighlight = document.getElementById("event-highlight");
@@ -132,13 +144,9 @@ function normalizeStore(store) {
   };
 }
 
-function renderStores(filter = "all") {
-  currentStoreFilter = filter;
+function renderStores() {
   storeGrid.innerHTML = "";
-  const normalizedFilter = normalizeText(filter);
-  const filtered = normalizedFilter === "all"
-    ? stores
-    : stores.filter((store) => (store.categoryKeys || []).includes(normalizedFilter));
+  const filtered = stores.filter((store) => matchStoreFilters(store));
   const visibleStores = isShowingAllStores ? filtered : filtered.slice(0, INITIAL_STORE_LIMIT);
 
   visibleStores.forEach((store) => {
@@ -228,21 +236,107 @@ function formatCategoryLabel(category) {
     .join(" ");
 }
 
-function renderCategoryFilters() {
-  if (!categoryFilters) return;
+function renderStoreFilters() {
+  if (!storeCategoryOptions) return;
   const uniqueCategories = [...new Set(stores.flatMap((store) => store.categoryKeys || []).filter(Boolean))];
-  const orderedCategories = ["all", ...uniqueCategories.sort((a, b) => a.localeCompare(b, "pt-BR"))];
+  const orderedCategories = uniqueCategories.sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-  categoryFilters.innerHTML = "";
-  orderedCategories.forEach((categoryKey) => {
-    const button = document.createElement("button");
-    const isActive = currentStoreFilter === categoryKey;
-    button.type = "button";
-    button.className = `filter-btn px-7 py-3 rounded-full border border-marron text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-marron hover:text-white ${isActive ? "active bg-marron text-white" : "text-marron"}`;
-    button.dataset.category = categoryKey;
-    button.textContent = formatCategoryLabel(categoryKey);
-    categoryFilters.appendChild(button);
-  });
+  storeCategoryOptions.innerHTML = orderedCategories
+    .map((categoryKey) => {
+      const checked = storeFiltersState.categories.includes(categoryKey) ? "checked" : "";
+      return `<label class="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-700 hover:bg-slate-50"><input type="checkbox" class="store-category-option rounded border-slate-300 text-marron focus:ring-marron" value="${categoryKey}" ${checked}><span>${formatCategoryLabel(categoryKey)}</span></label>`;
+    })
+    .join("");
+  updateStoreCategoryLabel();
+}
+
+function updateStoreCategoryLabel() {
+  if (!storeCategoryLabel) return;
+  const selected = storeFiltersState.categories || [];
+  if (!selected.length) {
+    storeCategoryLabel.textContent = "Todas as categorias";
+    return;
+  }
+  if (selected.length <= 2) {
+    storeCategoryLabel.textContent = selected.map((key) => formatCategoryLabel(key)).join(", ");
+    return;
+  }
+  storeCategoryLabel.textContent = `${selected.length} categorias selecionadas`;
+}
+
+function toggleStoreCategoryMenu(forceOpen) {
+  if (!storeCategoryMenu) return;
+  const shouldOpen = forceOpen == null ? storeCategoryMenu.classList.contains("hidden") : !!forceOpen;
+  storeCategoryMenu.classList.toggle("hidden", !shouldOpen);
+}
+
+function parseStoreHourRange(hoursText) {
+  const matches = String(hoursText || "").match(/(\d{1,2}):(\d{2})/g) || [];
+  if (matches.length < 2) return null;
+  const [startRaw, endRaw] = matches;
+  const parseMinutes = (token) => {
+    const [h, m] = token.split(":").map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+  };
+  const start = parseMinutes(startRaw);
+  const end = parseMinutes(endRaw);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  return { start, end };
+}
+
+function parseTimeToMinutes(timeText) {
+  const match = String(timeText || "").match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+  return hour * 60 + minute;
+}
+
+function expandRangeToIntervals(start, end) {
+  if (start <= end) return [[start, end]];
+  return [[start, 24 * 60], [0, end]];
+}
+
+function rangesOverlap(aStart, aEnd, bStart, bEnd) {
+  const aIntervals = expandRangeToIntervals(aStart, aEnd);
+  const bIntervals = expandRangeToIntervals(bStart, bEnd);
+  return aIntervals.some(([as, ae]) => bIntervals.some(([bs, be]) => as < be && bs < ae));
+}
+
+function matchStoreHoursFilter(store, periodStart, periodEnd) {
+  if (!periodStart && !periodEnd) return true;
+  const parsedStart = parseTimeToMinutes(periodStart || "00:00");
+  const parsedEnd = parseTimeToMinutes(periodEnd || "23:59");
+  if (!Number.isFinite(parsedStart) || !Number.isFinite(parsedEnd)) return true;
+  const storeRange = parseStoreHourRange(store.hours);
+  if (!storeRange) return false;
+  return rangesOverlap(storeRange.start, storeRange.end, parsedStart, parsedEnd);
+}
+
+function matchStoreSearchFilter(store, searchText) {
+  const term = normalizeText(searchText);
+  if (!term) return true;
+  const haystack = normalizeText(
+    [
+      store.name,
+      store.location,
+      store.hours,
+      store.desc,
+      ...(store.categoryKeys || []).map((k) => formatCategoryLabel(k))
+    ].join(" ")
+  );
+  return haystack.includes(term);
+}
+
+function matchStoreFilters(store) {
+  const categoryFilters = (storeFiltersState.categories || []).map((item) => normalizeText(item));
+  const passesCategory =
+    !categoryFilters.length || categoryFilters.some((cat) => (store.categoryKeys || []).includes(cat));
+  const passesSearch = matchStoreSearchFilter(store, storeFiltersState.search);
+  const passesHours = matchStoreHoursFilter(store, storeFiltersState.hoursStart, storeFiltersState.hoursEnd);
+  return passesCategory && passesSearch && passesHours;
 }
 
 function renderEvents() {
@@ -585,7 +679,7 @@ async function loadPublicData() {
     stores = storesData.map(normalizeStore);
     events = eventsData;
     gastronomyItems = dedupeGastronomyByStoreId(gastronomyData);
-    renderCategoryFilters();
+    renderStoreFilters();
     renderStores();
     renderEvents();
     renderGastronomy();
@@ -774,23 +868,64 @@ fullCalendarGrid.addEventListener("click", (event) => {
   openEventModal(selectedEvent);
 });
 
-if (categoryFilters) {
-  categoryFilters.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!(target instanceof Element)) return;
-    const button = target.closest("button[data-category]");
-    if (!button) return;
+if (storeCategoryToggle) {
+  storeCategoryToggle.addEventListener("click", () => {
+    toggleStoreCategoryMenu();
+  });
+}
 
+if (storeCategoryOptions) {
+  storeCategoryOptions.addEventListener("change", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || !target.classList.contains("store-category-option")) return;
     isShowingAllStores = false;
-    currentStoreFilter = button.dataset.category || "all";
-    renderCategoryFilters();
-    renderStores(currentStoreFilter);
+    const checkedInputs = storeCategoryOptions.querySelectorAll(".store-category-option:checked");
+    storeFiltersState.categories = Array.from(checkedInputs, (input) => input.value).filter(Boolean);
+    updateStoreCategoryLabel();
+    renderStores();
+  });
+}
+
+document.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element)) return;
+  if (!storeCategoryDropdown || !storeCategoryMenu) return;
+  if (storeCategoryDropdown.contains(event.target)) return;
+  toggleStoreCategoryMenu(false);
+});
+
+if (storeSearchInput) {
+  storeSearchInput.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    isShowingAllStores = false;
+    storeFiltersState.search = target.value || "";
+    renderStores();
+  });
+}
+
+if (storeHoursStartInput) {
+  storeHoursStartInput.addEventListener("change", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    isShowingAllStores = false;
+    storeFiltersState.hoursStart = target.value || "";
+    renderStores();
+  });
+}
+
+if (storeHoursEndInput) {
+  storeHoursEndInput.addEventListener("change", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    isShowingAllStores = false;
+    storeFiltersState.hoursEnd = target.value || "";
+    renderStores();
   });
 }
 
 toggleStoresBtn.addEventListener("click", () => {
   isShowingAllStores = !isShowingAllStores;
-  renderStores(currentStoreFilter);
+  renderStores();
 });
 
 openCalendarBtn.addEventListener("click", showCalendarView);

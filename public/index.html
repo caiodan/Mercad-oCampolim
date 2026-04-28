@@ -327,10 +327,38 @@
 
     <section id="vitrine" class="section-enter py-32 px-8 bg-white">
         <div class="max-w-7xl mx-auto">
-            <div class="flex flex-col items-center mb-20 space-y-6 text-center">
+            <div class="flex flex-col items-center mb-10 space-y-6 text-center">
                 <h2 class="text-5xl font-normal italic">As Nossas <span class="text-marron">Lojas</span></h2>
                 <div class="w-20 h-[2px] bg-marron-alpha"></div>
-                <div class="flex flex-wrap justify-center gap-3 mt-4" id="category-filters"></div>
+                <div class="w-full mt-6">
+                    <div class="mx-auto grid w-full max-w-5xl grid-cols-1 gap-3 rounded-3xl border border-slate-200 bg-slate-50/70 p-4 md:grid-cols-3">
+                        <label class="flex flex-col gap-2 text-left">
+                            <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Categoria</span>
+                            <div id="store-filter-category-dropdown" class="relative">
+                                <button id="store-filter-category-toggle" type="button" class="flex h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition hover:border-slate-300 focus:border-marron focus:ring-2 focus:ring-marron/20">
+                                    <span id="store-filter-category-label">Todas as categorias</span>
+                                    <span class="text-xs text-slate-400">▼</span>
+                                </button>
+                                <div id="store-filter-category-menu" class="absolute z-20 mt-2 hidden max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+                                    <div id="store-filter-category-options" class="space-y-1"></div>
+                                </div>
+                            </div>
+                            <span class="text-[11px] text-slate-400">Selecione uma ou mais categorias no dropdown.</span>
+                        </label>
+                        <label class="flex flex-col gap-2 text-left">
+                            <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Busca</span>
+                            <input id="store-filter-search" type="search" placeholder="Buscar por loja, local ou categoria" class="h-11 rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-marron focus:ring-2 focus:ring-marron/20">
+                        </label>
+                        <label class="flex flex-col gap-2 text-left">
+                            <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Horário</span>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input id="store-filter-hours-start" type="time" class="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-marron focus:ring-2 focus:ring-marron/20">
+                                <input id="store-filter-hours-end" type="time" class="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-marron focus:ring-2 focus:ring-marron/20">
+                            </div>
+                            <span class="text-[11px] text-slate-400">Filtra lojas que operam no período informado.</span>
+                        </label>
+                    </div>
+                </div>
             </div>
             <div id="stateBox" class="mb-6 text-sm text-slate-500 text-center">Carregando lojas...</div>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-8" id="store-grid"></div>
