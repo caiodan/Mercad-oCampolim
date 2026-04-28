@@ -167,7 +167,7 @@ function renderStores(filter = "all") {
         </div>
         ${logoBlock}
       </div>
-      <div class="p-6 text-slate-800">
+      <div class="p-6 text-slate-800 mt-[8px]">
         <span class="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600">${(store.categoryKeys || [])
           .map((k) => formatCategoryLabel(k))
           .join(" · ")}</span>
@@ -214,7 +214,8 @@ function formatCategoryLabel(category) {
     gastronomia: "Gastronomia",
     bebidas: "Bebidas",
     servicos: "Serviços",
-    roupas: "Roupas"
+    roupas: "Roupas",
+    infantil: "Infantil"
   };
   if (labelMap[normalized]) return labelMap[normalized];
   if (!category) return "Serviços";
