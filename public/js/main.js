@@ -87,6 +87,14 @@ function dedupeGastronomyByStoreId(items) {
 }
 const eventModal = document.getElementById("event-modal");
 
+function syncBodyScrollLock() {
+  const mobilePanel = document.getElementById("mobile-nav-panel");
+  const menuOpen = mobilePanel && mobilePanel.classList.contains("is-open");
+  const storeOpen = modal && modal.classList.contains("is-open");
+  const eventOpen = eventModal && eventModal.classList.contains("is-open");
+  document.body.style.overflow = menuOpen || storeOpen || eventOpen ? "hidden" : "";
+}
+
 function normalizeStore(store) {
   const rawCategory = String(store.category || "servicos").trim();
   const normalizedCategory = normalizeText(rawCategory);
@@ -585,7 +593,7 @@ function openModal(store) {
   modalImg.src = store.img;
 
   modal.classList.add("is-open");
-  document.body.style.overflow = "hidden";
+  syncBodyScrollLock();
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -605,13 +613,13 @@ function openEventModal(eventData) {
   eventModalImg.src = eventData.image_url || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200";
 
   eventModal.classList.add("is-open");
-  document.body.style.overflow = "hidden";
+  syncBodyScrollLock();
   if (window.lucide) window.lucide.createIcons();
 }
 
 function closeModal() {
   modal.classList.remove("is-open");
-  document.body.style.overflow = "auto";
+  syncBodyScrollLock();
   const modalImg = document.getElementById("modal-img");
   if (modalImg) modalImg.onerror = null;
 }
@@ -619,7 +627,34 @@ function closeModal() {
 function closeEventModal() {
   if (!eventModal) return;
   eventModal.classList.remove("is-open");
-  document.body.style.overflow = "auto";
+  syncBodyScrollLock();
+}
+
+function openMobileNav() {
+  const backdrop = document.getElementById("mobile-nav-backdrop");
+  const panel = document.getElementById("mobile-nav-panel");
+  const opener = document.getElementById("mobile-nav-open");
+  if (!backdrop || !panel || !opener) return;
+  backdrop.classList.add("is-open");
+  panel.classList.add("is-open");
+  backdrop.setAttribute("aria-hidden", "false");
+  panel.setAttribute("aria-hidden", "false");
+  opener.setAttribute("aria-expanded", "true");
+  syncBodyScrollLock();
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function closeMobileNav() {
+  const backdrop = document.getElementById("mobile-nav-backdrop");
+  const panel = document.getElementById("mobile-nav-panel");
+  const opener = document.getElementById("mobile-nav-open");
+  if (!backdrop || !panel || !opener) return;
+  backdrop.classList.remove("is-open");
+  panel.classList.remove("is-open");
+  backdrop.setAttribute("aria-hidden", "true");
+  panel.setAttribute("aria-hidden", "true");
+  opener.setAttribute("aria-expanded", "false");
+  syncBodyScrollLock();
 }
 
 document.getElementById("close-modal").onclick = closeModal;
@@ -640,6 +675,11 @@ if (eventModal) {
 }
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
+  const mobilePanel = document.getElementById("mobile-nav-panel");
+  if (mobilePanel && mobilePanel.classList.contains("is-open")) {
+    closeMobileNav();
+    return;
+  }
   if (modal.classList.contains("is-open")) {
     closeModal();
     return;
@@ -648,6 +688,22 @@ document.addEventListener("keydown", (event) => {
     closeEventModal();
   }
 });
+
+(function initMobileNav() {
+  const openBtn = document.getElementById("mobile-nav-open");
+  const closeBtn = document.getElementById("mobile-nav-close");
+  const backdrop = document.getElementById("mobile-nav-backdrop");
+  const panel = document.getElementById("mobile-nav-panel");
+  if (!openBtn || !closeBtn || !backdrop || !panel) return;
+
+  openBtn.addEventListener("click", () => openMobileNav());
+  closeBtn.addEventListener("click", () => closeMobileNav());
+  backdrop.addEventListener("click", () => closeMobileNav());
+
+  panel.querySelectorAll("a.mobile-nav-link").forEach((link) => {
+    link.addEventListener("click", () => closeMobileNav());
+  });
+})();
 
 storeGrid.addEventListener("click", (event) => {
   const clickTarget = event.target;
@@ -713,6 +769,14 @@ toggleStoresBtn.addEventListener("click", () => {
 
 openCalendarBtn.addEventListener("click", showCalendarView);
 backToEventsBtn.addEventListener("click", showPreviewView);
+
+window.addEventListener("resize", () => {
+  if (!window.matchMedia("(min-width: 1024px)").matches) return;
+  const mobilePanel = document.getElementById("mobile-nav-panel");
+  if (mobilePanel && mobilePanel.classList.contains("is-open")) {
+    closeMobileNav();
+  }
+});
 
 window.addEventListener("scroll", () => {
   const nav = document.getElementById("main-nav");
