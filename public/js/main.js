@@ -323,6 +323,22 @@ function selectHighlightEvent(sortedEvents) {
 }
 
 /**
+ * Velocidade do marquee: antes era "uma volta em 7s", o que em telas estreitas
+ * (trilho curto em px) virava poucos px/s — sensação de sumiço / faixa vazia.
+ * Usamos a mesma referência (7s) como ideal, mas limitamos px/s para não arrastar
+ * nem disparar demais em monitores largos.
+ */
+function gastronomyMarqueeSpeedPxPerMs(oneSetWidthPx) {
+  const BASE_MS_PER_SET = 7000;
+  const MIN_PX_PER_SEC = 130;
+  const MAX_PX_PER_SEC = 340;
+  const ideal = oneSetWidthPx / BASE_MS_PER_SET;
+  const minV = MIN_PX_PER_SEC / 1000;
+  const maxV = MAX_PX_PER_SEC / 1000;
+  return Math.min(maxV, Math.max(minV, ideal));
+}
+
+/**
  * Marquee em requestAnimationFrame + largura medida em pixels.
  * No primeiro paint (e em reload com cache), scrollWidth costuma vir antes
  * das imagens — oneSetWidth ficava errado e o loop “quebrava”. Por isso:
@@ -334,7 +350,6 @@ function startGastronomyMarquee(track) {
 
   track.style.willChange = "transform";
 
-  const DURATION_PER_SET_MS = 7000;
   let position = 0;
   let lastTimestamp = null;
   let oneSetWidth = 0;
@@ -387,7 +402,7 @@ function startGastronomyMarquee(track) {
     lastTimestamp = timestamp;
 
     if (!document.hidden && oneSetWidth > 0) {
-      position -= (oneSetWidth / DURATION_PER_SET_MS) * elapsed;
+      position -= gastronomyMarqueeSpeedPxPerMs(oneSetWidth) * elapsed;
       if (position <= -oneSetWidth) {
         position += oneSetWidth;
       }
