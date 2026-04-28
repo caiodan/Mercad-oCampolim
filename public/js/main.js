@@ -191,7 +191,8 @@ function formatCategoryLabel(category) {
     hortifruti: "Hortifruti",
     gastronomia: "Gastronomia",
     bebidas: "Bebidas",
-    servicos: "Serviços"
+    servicos: "Serviços",
+    roupas: "Roupas"
   };
   if (labelMap[normalized]) return labelMap[normalized];
   if (!category) return "Serviços";
