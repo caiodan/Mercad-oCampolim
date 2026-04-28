@@ -192,20 +192,78 @@
                         <input type="text" name="title" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
                     </label>
                     <label class="text-sm font-semibold text-slate-600">
-                        Data (texto)
-                        <input type="text" name="eventDate" required placeholder="12 de Maio" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                        Data Inicio
+                        <input type="date" name="periodStart" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
                     </label>
+                    <label class="text-sm font-semibold text-slate-600">
+                        Data Fim
+                        <input type="date" name="periodEnd" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                    </label>
+                    <label class="text-sm font-semibold text-slate-600 md:col-span-2">
+                        Tipo de ocorrencia
+                        <select name="recurrenceType" class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+                            <option value="none">Periodo continuo (todos os dias)</option>
+                            <option value="weekly">Recorrencia semanal (dias da semana)</option>
+                            <option value="specific_dates">Datas especificas</option>
+                        </select>
+                    </label>
+                    <div id="eventWeeklyOptions" class="hidden text-sm font-semibold text-slate-600 md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                        <p class="mb-3 text-sm font-semibold text-slate-700">Dias da semana</p>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                            <label class="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs"><input type="checkbox" name="weekdays" value="0" class="rounded border-slate-300">Dom</label>
+                            <label class="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs"><input type="checkbox" name="weekdays" value="1" class="rounded border-slate-300">Seg</label>
+                            <label class="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs"><input type="checkbox" name="weekdays" value="2" class="rounded border-slate-300">Ter</label>
+                            <label class="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs"><input type="checkbox" name="weekdays" value="3" class="rounded border-slate-300">Qua</label>
+                            <label class="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs"><input type="checkbox" name="weekdays" value="4" class="rounded border-slate-300">Qui</label>
+                            <label class="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs"><input type="checkbox" name="weekdays" value="5" class="rounded border-slate-300">Sex</label>
+                            <label class="flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs"><input type="checkbox" name="weekdays" value="6" class="rounded border-slate-300">Sab</label>
+                        </div>
+                    </div>
+                    <div id="eventSpecificDatesOptions" class="hidden text-sm font-semibold text-slate-600 md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-slate-700">Datas especificas</p>
+                            <button id="addSpecificDateBtn" type="button" class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors">Adicionar data</button>
+                        </div>
+                        <div id="specificDatesList" class="space-y-2"></div>
+                    </div>
                     <label class="text-sm font-semibold text-slate-600 md:col-span-2">
                         Descricao
                         <textarea name="description" rows="4" required class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"></textarea>
                     </label>
-                    <label class="text-sm font-semibold text-slate-600 md:col-span-2">
-                        Imagem — URL ou arquivo (Cloudinary ao salvar)
-                        <input type="url" name="imageUrl" placeholder="https://..." class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
-                        <input type="file" accept="image/*" data-event-file-for="imageUrl" class="mt-2 block w-full max-w-[min(100%,320px)] text-xs text-slate-600">
-                        <p data-image-soft-warn class="hidden mt-1 text-[11px] font-medium text-amber-800" aria-live="polite"></p>
-                        <p class="mt-1 text-[11px] text-slate-400">Recomendamos ate 5 MB; arquivos maiores ainda podem ser enviados. Com arquivo selecionado, o envio ao Cloudinary ocorre ao clicar em Salvar evento.</p>
-                    </label>
+                    <input type="hidden" name="imageUrl">
+                    <input type="hidden" name="imageUrls">
+                    <div class="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-slate-700">Imagem principal (capa)</p>
+                            <span class="text-[11px] text-slate-400">Somente arquivo local</span>
+                        </div>
+                        <label class="group relative block cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 bg-white px-5 py-8 text-center transition hover:border-marron/60 hover:bg-[#fffaf7]">
+                            <input type="file" accept="image/*" data-event-cover-file data-event-image-input class="sr-only">
+                            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Clique para escolher a capa</p>
+                            <p data-event-file-label-text class="mt-2 text-xs text-slate-400">Nenhum arquivo selecionado</p>
+                            <p data-image-soft-warn class="hidden mt-2 text-[11px] font-medium text-amber-800" aria-live="polite"></p>
+                        </label>
+                    </div>
+                    <div class="md:col-span-2 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-slate-700">Fotos do evento</p>
+                            <button id="addEventPhotoInputBtn" type="button" class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors">Adicionar mais</button>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="group relative block cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 bg-white px-5 py-6 text-center transition hover:border-marron/60 hover:bg-[#fffaf7]">
+                                <input type="file" accept="image/*" multiple data-event-gallery-batch data-event-image-input class="sr-only">
+                                <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Selecionar varias de uma vez</p>
+                                <p data-event-file-label-text class="mt-2 text-xs text-slate-400">Nenhum arquivo selecionado</p>
+                                <p data-image-soft-warn class="hidden mt-2 text-[11px] font-medium text-amber-800" aria-live="polite"></p>
+                            </label>
+                            <div id="eventGalleryExtraInputs" class="grid grid-cols-1 gap-3"></div>
+                        </div>
+                        <div id="eventExistingPhotos" class="hidden rounded-xl border border-slate-200 bg-white p-3">
+                            <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Fotos atuais</p>
+                            <p id="eventExistingPhotosText" class="text-xs text-slate-500"></p>
+                        </div>
+                        <p class="text-[11px] text-slate-400">No editar, as novas fotos adicionadas entram na galeria existente. Recomendado ate 5 MB por foto.</p>
+                    </div>
                     <label class="text-sm font-semibold text-slate-600 md:col-span-2 flex items-center gap-3">
                         <input type="checkbox" name="highlight" class="w-4 h-4 rounded border-slate-300">
                         Evento em destaque

@@ -3,6 +3,8 @@ let events = [];
 let gastronomyItems = [];
 const INITIAL_STORE_LIMIT = 12;
 let isShowingAllStores = false;
+let selectedEventId = null;
+let selectedEventImageIndex = 0;
 const storeFiltersState = {
   categories: [],
   search: "",
@@ -97,14 +99,11 @@ function dedupeGastronomyByStoreId(items) {
     return true;
   });
 }
-const eventModal = document.getElementById("event-modal");
-
 function syncBodyScrollLock() {
   const mobilePanel = document.getElementById("mobile-nav-panel");
   const menuOpen = mobilePanel && mobilePanel.classList.contains("is-open");
   const storeOpen = modal && modal.classList.contains("is-open");
-  const eventOpen = eventModal && eventModal.classList.contains("is-open");
-  document.body.style.overflow = menuOpen || storeOpen || eventOpen ? "hidden" : "";
+  document.body.style.overflow = menuOpen || storeOpen ? "hidden" : "";
 }
 
 function parseStoreCategorySlugs(store) {
@@ -348,34 +347,59 @@ function renderEvents() {
   }
 
   const sortedEvents = [...events].sort((a, b) => compareEventsByDate(a, b));
-  const highlight = selectHighlightEvent(sortedEvents);
-  const remaining = sortedEvents.filter((event) => event.id !== highlight.id).slice(0, 2);
+  const selected =
+    sortedEvents.find((event) => Number(event.id) === Number(selectedEventId)) ||
+    selectHighlightEvent(sortedEvents);
+  if (!selected) return;
+  selectedEventId = selected.id;
+  if (selectedEventImageIndex >= selected.images.length) {
+    selectedEventImageIndex = 0;
+  }
+  const activeImage = selected.images[selectedEventImageIndex] || selected.image_url;
+  const otherEvents = sortedEvents.filter((event) => Number(event.id) !== Number(selected.id));
 
   eventHighlight.innerHTML = `
-    <div data-event-id="${highlight.id}" class="group relative event-card-large bg-white rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all cursor-pointer">
-      <img src="${highlight.image_url || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" alt="${highlight.title}">
-      <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-10 lg:p-16">
-        <div class="flex items-center gap-4 text-amber-400 mb-4">
-          <span class="px-4 py-1 rounded-full border border-amber-400/30 bg-amber-400/10 text-[10px] font-bold uppercase tracking-widest">Destaque do Mes</span>
-          <span class="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2"><i data-lucide="calendar" class="w-3 h-3"></i> ${highlight.event_date}</span>
-        </div>
-        <h4 class="text-4xl lg:text-5xl font-serif italic text-white mb-6">${highlight.title}</h4>
-        <p class="text-white/70 text-lg max-w-xl leading-relaxed mb-8">${highlight.description}</p>
+    <article class="bg-white rounded-[2.5rem] overflow-hidden shadow-sm border border-[#eddcd2]">
+      <div class="relative h-[300px] sm:h-[380px] lg:h-[460px] overflow-hidden bg-slate-100">
+        <img src="${activeImage || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover" alt="${selected.title}">
       </div>
-    </div>
+      <div class="p-6 lg:p-8 space-y-5">
+        <div class="flex flex-wrap items-center gap-3">
+          <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">${selected.event_date || "Data a confirmar"}</span>
+          ${selected.highlight ? '<span class="rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-amber-700">Destaque</span>' : ""}
+          <span class="rounded-full border border-slate-200 px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-slate-500">${selected.images.length} foto(s)</span>
+        </div>
+        <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-400">${formatEventRecurrenceText(selected)}</p>
+        <h4 class="text-3xl lg:text-4xl font-serif italic text-slate-900 leading-tight line-clamp-1">${selected.title}</h4>
+        <p class="text-[11px] font-semibold uppercase tracking-widest text-slate-500">${formatEventPeriodLine(selected)}</p>
+        <p class="text-slate-500 text-sm lg:text-base leading-relaxed">${selected.description}</p>
+        <div class="grid grid-cols-4 sm:grid-cols-6 gap-2 lg:gap-3" id="event-gallery-thumbs">
+          ${selected.images
+            .map(
+              (url, idx) => `<button type="button" data-event-thumb-index="${idx}" class="group relative overflow-hidden rounded-xl border ${idx === selectedEventImageIndex ? "border-marron" : "border-slate-200"}">
+                <img src="${url}" alt="Foto ${idx + 1} do evento ${selected.title}" class="w-full h-16 object-cover group-hover:scale-105 transition-transform">
+              </button>`
+            )
+            .join("")}
+        </div>
+      </div>
+    </article>
   `;
 
-  remaining.forEach((event) => {
+  otherEvents.forEach((event) => {
     const card = document.createElement("div");
     card.dataset.eventId = String(event.id ?? "");
-    card.className = "group flex-1 bg-white rounded-[2.5rem] overflow-hidden shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col sm:flex-row lg:flex-col xl:flex-row";
+    const isActive = Number(event.id) === Number(selectedEventId);
+    card.className = `group flex-1 bg-white rounded-[2.5rem] overflow-hidden shadow-sm transition-all cursor-pointer flex flex-col sm:flex-row lg:flex-col xl:flex-row border ${isActive ? "border-marron" : "border-transparent hover:shadow-xl"}`;
     card.innerHTML = `
       <div class="sm:w-1/3 lg:w-full xl:w-1/3 h-48 sm:h-full lg:h-48 xl:h-full relative overflow-hidden">
-        <img src="${event.image_url || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="${event.title}">
+        <img src="${(event.images && event.images[0]) || event.image_url || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="${event.title}">
       </div>
       <div class="flex-1 p-8 flex flex-col justify-center">
         <span class="text-[9px] font-bold text-amber-600 uppercase tracking-[0.2em] mb-2">${event.event_date}</span>
-        <h5 class="text-xl font-serif italic text-slate-900 group-hover:text-marron transition-colors mb-2 leading-tight">${event.title}</h5>
+        <h5 class="text-xl font-serif italic text-slate-900 group-hover:text-marron transition-colors mb-2 leading-tight line-clamp-1">${event.title}</h5>
+        <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-2">${formatEventPeriodLine(event)}</p>
+        <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">${formatEventRecurrenceText(event)}</p>
         <p class="text-xs text-slate-500 line-clamp-2">${event.description}</p>
       </div>
     `;
@@ -421,7 +445,99 @@ function parseEventDate(eventDate) {
   return new Date(year, month, day);
 }
 
+function normalizeEventPayload(event) {
+  let imageSource = Array.isArray(event.images) ? event.images : [];
+  if (!imageSource.length && typeof event.images === "string") {
+    try {
+      const parsed = JSON.parse(event.images);
+      imageSource = Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+      imageSource = [];
+    }
+  }
+  const imageList = imageSource.map((url) => String(url || "").trim()).filter(Boolean);
+  const fallback = String(event.image_url || "").trim();
+  const images = imageList.length ? imageList : (fallback ? [fallback] : []);
+  const weekdays = (() => {
+    if (Array.isArray(event.weekdays)) return event.weekdays;
+    if (typeof event.weekdays === "string") {
+      try {
+        const parsed = JSON.parse(event.weekdays);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_error) {
+        return [];
+      }
+    }
+    return [];
+  })()
+    .map((item) => Number(item))
+    .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+  const specificDates = (() => {
+    if (Array.isArray(event.specific_dates)) return event.specific_dates;
+    if (typeof event.specific_dates === "string") {
+      try {
+        const parsed = JSON.parse(event.specific_dates);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_error) {
+        return [];
+      }
+    }
+    return [];
+  })()
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+  return {
+    ...event,
+    images,
+    image_url: images[0] || null,
+    recurrence_type: String(event.recurrence_type || "none"),
+    weekdays,
+    specific_dates: specificDates
+  };
+}
+
+function formatEventRecurrenceText(event) {
+  const dayMap = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+  const type = String(event.recurrence_type || "none");
+  if (type === "weekly") {
+    if (!Array.isArray(event.weekdays) || !event.weekdays.length) return "Recorrencia semanal";
+    const labels = event.weekdays
+      .slice()
+      .sort((a, b) => a - b)
+      .map((d) => dayMap[d] || "")
+      .filter(Boolean);
+    return `Semanal: ${labels.join(", ")}`;
+  }
+  if (type === "specific_dates") {
+    const count = Array.isArray(event.specific_dates) ? event.specific_dates.length : 0;
+    return count ? `${count} data(s) especifica(s)` : "Datas especificas";
+  }
+  return "Periodo continuo";
+}
+
+function formatEventPeriodLine(event) {
+  const start = String(event.period_start || "").trim();
+  const end = String(event.period_end || "").trim();
+  if (!start && !end) return "Data a confirmar";
+  const toBr = (value) => {
+    const parts = String(value || "").split("-");
+    if (parts.length !== 3) return value || "";
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  };
+  return `Inicio: ${toBr(start || end)} · Fim: ${toBr(end || start)}`;
+}
+
 function compareEventsByDate(first, second) {
+  const firstPeriod = String(first.period_start || "").trim();
+  const secondPeriod = String(second.period_start || "").trim();
+  if (firstPeriod && secondPeriod) {
+    if (firstPeriod < secondPeriod) return -1;
+    if (firstPeriod > secondPeriod) return 1;
+  } else if (firstPeriod) {
+    return -1;
+  } else if (secondPeriod) {
+    return 1;
+  }
   const firstDate = parseEventDate(first.event_date);
   const secondDate = parseEventDate(second.event_date);
 
@@ -640,7 +756,9 @@ function renderFullCalendar() {
           <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">${event.event_date}</span>
           ${event.highlight ? '<span class="rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-amber-700">Destaque</span>' : ""}
         </div>
-        <h4 class="mt-3 text-2xl font-serif italic text-slate-900 leading-tight">${event.title}</h4>
+        <p class="mt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">${formatEventRecurrenceText(event)}</p>
+        <h4 class="mt-3 text-2xl font-serif italic text-slate-900 leading-tight line-clamp-1">${event.title}</h4>
+        <p class="mt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500">${formatEventPeriodLine(event)}</p>
         <p class="mt-3 text-sm text-slate-500 leading-relaxed">${event.description}</p>
       </div>
     `;
@@ -677,7 +795,7 @@ async function loadPublicData() {
     const eventsData = await eventsResponse.json();
     const gastronomyData = await gastronomyResponse.json();
     stores = storesData.map(normalizeStore);
-    events = eventsData;
+    events = eventsData.map(normalizeEventPayload);
     gastronomyItems = dedupeGastronomyByStoreId(gastronomyData);
     renderStoreFilters();
     renderStores();
@@ -717,24 +835,16 @@ function openModal(store) {
   if (window.lucide) window.lucide.createIcons();
 }
 
-function openEventModal(eventData) {
-  if (!eventModal) return;
-
-  const eventModalTitle = document.getElementById("event-modal-title");
-  const eventModalDate = document.getElementById("event-modal-date");
-  const eventModalDesc = document.getElementById("event-modal-desc");
-  const eventModalImg = document.getElementById("event-modal-img");
-
-  if (!eventModalTitle || !eventModalDate || !eventModalDesc || !eventModalImg) return;
-
-  eventModalTitle.innerText = eventData.title || "Evento";
-  eventModalDate.innerText = eventData.event_date || "Data a confirmar";
-  eventModalDesc.innerText = eventData.description || "Sem descricao disponivel.";
-  eventModalImg.src = eventData.image_url || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200";
-
-  eventModal.classList.add("is-open");
-  syncBodyScrollLock();
-  if (window.lucide) window.lucide.createIcons();
+function selectEventInPage(eventId, options = {}) {
+  const { imageIndex = 0, ensurePreviewVisible = false } = options;
+  const selected = events.find((item) => Number(item.id) === Number(eventId));
+  if (!selected) return;
+  selectedEventId = selected.id;
+  selectedEventImageIndex = Math.max(0, Math.min(Number(imageIndex) || 0, Math.max(0, selected.images.length - 1)));
+  if (ensurePreviewVisible) {
+    showPreviewView();
+  }
+  renderEvents();
 }
 
 function closeModal() {
@@ -742,12 +852,6 @@ function closeModal() {
   syncBodyScrollLock();
   const modalImg = document.getElementById("modal-img");
   if (modalImg) modalImg.onerror = null;
-}
-
-function closeEventModal() {
-  if (!eventModal) return;
-  eventModal.classList.remove("is-open");
-  syncBodyScrollLock();
 }
 
 function openMobileNav() {
@@ -782,17 +886,6 @@ modal.addEventListener("click", (event) => {
   if (event.target !== modal) return;
   closeModal();
 });
-if (eventModal) {
-  const closeEventModalBtn = document.getElementById("close-event-modal");
-  if (closeEventModalBtn) {
-    closeEventModalBtn.onclick = closeEventModal;
-  }
-
-  eventModal.addEventListener("click", (event) => {
-    if (event.target !== eventModal) return;
-    closeEventModal();
-  });
-}
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   const mobilePanel = document.getElementById("mobile-nav-panel");
@@ -803,9 +896,6 @@ document.addEventListener("keydown", (event) => {
   if (modal.classList.contains("is-open")) {
     closeModal();
     return;
-  }
-  if (eventModal && eventModal.classList.contains("is-open")) {
-    closeEventModal();
   }
 });
 
@@ -844,14 +934,21 @@ eventsPreview.addEventListener("click", (event) => {
   const clickTarget = event.target;
   if (!(clickTarget instanceof Element)) return;
 
+  const thumbButton = clickTarget.closest("button[data-event-thumb-index]");
+  if (thumbButton) {
+    const thumbIndex = Number(thumbButton.getAttribute("data-event-thumb-index"));
+    if (Number.isFinite(thumbIndex)) {
+      selectedEventImageIndex = thumbIndex;
+      renderEvents();
+    }
+    return;
+  }
+
   const eventCard = clickTarget.closest("[data-event-id]");
   if (!eventCard) return;
 
   const eventId = Number(eventCard.getAttribute("data-event-id"));
-  const selectedEvent = events.find((item) => Number(item.id) === eventId);
-  if (!selectedEvent) return;
-
-  openEventModal(selectedEvent);
+  selectEventInPage(eventId);
 });
 
 fullCalendarGrid.addEventListener("click", (event) => {
@@ -862,10 +959,7 @@ fullCalendarGrid.addEventListener("click", (event) => {
   if (!eventCard) return;
 
   const eventId = Number(eventCard.getAttribute("data-event-id"));
-  const selectedEvent = events.find((item) => Number(item.id) === eventId);
-  if (!selectedEvent) return;
-
-  openEventModal(selectedEvent);
+  selectEventInPage(eventId, { ensurePreviewVisible: true });
 });
 
 if (storeCategoryToggle) {

@@ -446,13 +446,22 @@ async function syncVisualCatalog(db) {
 
     await db.run("DELETE FROM events");
     for (const event of VISUAL_EVENTS) {
+      const imageList = Array.isArray(event.images) && event.images.length
+        ? event.images
+        : (event.image_url ? [event.image_url] : []);
       await db.run(
-        `INSERT INTO events (title, event_date, description, image_url, highlight, updated_at)
-         VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        `INSERT INTO events (title, event_date, period_start, period_end, recurrence_type, weekdays, specific_dates, description, image_url, images, highlight, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?, ?::jsonb, ?, CURRENT_TIMESTAMP)`,
         event.title,
         event.event_date,
+        event.period_start || null,
+        event.period_end || null,
+        event.recurrence_type || "none",
+        JSON.stringify(event.weekdays || []),
+        JSON.stringify(event.specific_dates || []),
         event.description,
         event.image_url,
+        JSON.stringify(imageList),
         event.highlight
       );
     }
@@ -511,8 +520,14 @@ async function initDb() {
       id SERIAL PRIMARY KEY,
       title TEXT NOT NULL,
       event_date TEXT NOT NULL,
+      period_start DATE,
+      period_end DATE,
+      recurrence_type TEXT DEFAULT 'none',
+      weekdays JSONB DEFAULT '[]'::jsonb,
+      specific_dates JSONB DEFAULT '[]'::jsonb,
       description TEXT NOT NULL,
       image_url TEXT,
+      images JSONB DEFAULT '[]'::jsonb,
       highlight INTEGER DEFAULT 0,
       created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -538,6 +553,12 @@ async function initDb() {
   await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS logo_url TEXT");
   await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS show_in_gastronomy INTEGER DEFAULT 0");
   await db.exec("ALTER TABLE stores ADD COLUMN IF NOT EXISTS categories JSONB DEFAULT '[]'::jsonb");
+  await db.exec("ALTER TABLE events ADD COLUMN IF NOT EXISTS images JSONB DEFAULT '[]'::jsonb");
+  await db.exec("ALTER TABLE events ADD COLUMN IF NOT EXISTS period_start DATE");
+  await db.exec("ALTER TABLE events ADD COLUMN IF NOT EXISTS period_end DATE");
+  await db.exec("ALTER TABLE events ADD COLUMN IF NOT EXISTS recurrence_type TEXT DEFAULT 'none'");
+  await db.exec("ALTER TABLE events ADD COLUMN IF NOT EXISTS weekdays JSONB DEFAULT '[]'::jsonb");
+  await db.exec("ALTER TABLE events ADD COLUMN IF NOT EXISTS specific_dates JSONB DEFAULT '[]'::jsonb");
   await db.exec(`
     UPDATE stores
     SET categories = jsonb_build_array(category)
@@ -545,6 +566,20 @@ async function initDb() {
        OR categories = '[]'::jsonb
        OR jsonb_typeof(categories) <> 'array'
        OR jsonb_array_length(COALESCE(categories, '[]'::jsonb)) = 0
+  `);
+  await db.exec(`
+    UPDATE events
+    SET images = jsonb_build_array(image_url)
+    WHERE (images IS NULL
+      OR images = '[]'::jsonb
+      OR jsonb_typeof(images) <> 'array'
+      OR jsonb_array_length(COALESCE(images, '[]'::jsonb)) = 0)
+      AND COALESCE(NULLIF(TRIM(image_url), ''), '') <> ''
+  `);
+  await db.exec(`
+    UPDATE events
+    SET recurrence_type = COALESCE(NULLIF(TRIM(recurrence_type), ''), 'none')
+    WHERE recurrence_type IS NULL OR TRIM(recurrence_type) = ''
   `);
 
   const admin = await db.get("SELECT id FROM admins WHERE email = ?", "admin@mercado.local");

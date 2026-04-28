@@ -11,6 +11,14 @@ const adminEventsGrid = document.getElementById("adminEventsGrid");
 const adminEventsState = document.getElementById("adminEventsState");
 const cancelEventEditBtn = document.getElementById("cancelEventEditBtn");
 const openEventFormBtn = document.getElementById("openEventFormBtn");
+const addEventPhotoInputBtn = document.getElementById("addEventPhotoInputBtn");
+const eventGalleryExtraInputs = document.getElementById("eventGalleryExtraInputs");
+const eventExistingPhotos = document.getElementById("eventExistingPhotos");
+const eventExistingPhotosText = document.getElementById("eventExistingPhotosText");
+const eventWeeklyOptions = document.getElementById("eventWeeklyOptions");
+const eventSpecificDatesOptions = document.getElementById("eventSpecificDatesOptions");
+const addSpecificDateBtn = document.getElementById("addSpecificDateBtn");
+const specificDatesList = document.getElementById("specificDatesList");
 const adminGastronomyList = document.getElementById("adminGastronomyList");
 const adminGastronomyState = document.getElementById("adminGastronomyState");
 const saveGastronomySelectionBtn = document.getElementById("saveGastronomySelectionBtn");
@@ -56,20 +64,25 @@ function clearImageSoftHintForFileInput(input) {
 
 function setupImageSoftLimitWarnings() {
   const fileInputs = document.querySelectorAll(
-    'input[type="file"][accept*="image"][data-store-file-for], input[type="file"][accept*="image"][data-event-file-for]'
+    'input[type="file"][accept*="image"][data-store-file-for], input[type="file"][accept*="image"][data-event-image-input]'
   );
   fileInputs.forEach((input) => {
     input.addEventListener("change", () => {
+      if (input.matches("[data-event-image-input]")) {
+        updateEventFileTileLabel(input);
+      }
       const warn = input.parentElement?.querySelector("[data-image-soft-warn]");
       if (!warn) return;
-      const file = input.files?.[0];
-      if (!file || file.size <= IMAGE_SOFT_LIMIT_BYTES) {
+      const files = Array.from(input.files || []);
+      const bigger = files.filter((file) => file.size > IMAGE_SOFT_LIMIT_BYTES);
+      if (!bigger.length) {
         warn.classList.add("hidden");
         warn.textContent = "";
         return;
       }
-      const mb = (file.size / (1024 * 1024)).toFixed(1);
-      warn.textContent = `Aviso: ~${mb} MB (acima da recomendacao de 5 MB). O envio continuara ao salvar.`;
+      const biggest = bigger.reduce((acc, item) => (item.size > acc.size ? item : acc), bigger[0]);
+      const mb = (biggest.size / (1024 * 1024)).toFixed(1);
+      warn.textContent = `Aviso: ${bigger.length} arquivo(s) acima de 5 MB (maior com ~${mb} MB). O envio continuara ao salvar.`;
       warn.classList.remove("hidden");
     });
   });
@@ -108,10 +121,161 @@ function resetForm() {
 function resetEventForm() {
   eventForm.reset();
   eventForm.elements.id.value = "";
+  eventForm.elements.imageUrl.value = "";
+  eventForm.elements.imageUrls.value = "[]";
   eventForm.elements.highlight.checked = false;
+  eventForm.elements.periodStart.value = "";
+  eventForm.elements.periodEnd.value = "";
+  eventForm.elements.recurrenceType.value = "none";
+  setEventWeekdays([]);
+  setEventSpecificDates([]);
+  syncEventRecurrenceOptions();
+  clearEventGalleryExtraInputs();
+  setEventExistingPhotos([]);
   cancelEventEditBtn.classList.add("hidden");
   clearImageSoftHints(eventForm);
+  refreshEventFileTileLabels();
   closeEventForm();
+}
+
+function syncEventRecurrenceOptions() {
+  const type = String(eventForm.elements.recurrenceType?.value || "none");
+  if (eventWeeklyOptions) eventWeeklyOptions.classList.toggle("hidden", type !== "weekly");
+  if (eventSpecificDatesOptions) eventSpecificDatesOptions.classList.toggle("hidden", type !== "specific_dates");
+}
+
+function setEventWeekdays(days) {
+  const set = new Set((days || []).map((d) => String(d)));
+  eventForm.querySelectorAll('input[name="weekdays"]').forEach((cb) => {
+    cb.checked = set.has(cb.value);
+  });
+}
+
+function addSpecificDateInput(value = "") {
+  if (!specificDatesList) return;
+  const row = document.createElement("div");
+  row.className = "flex items-center gap-2";
+  row.innerHTML = `
+    <input type="date" value="${String(value || "")}" data-specific-date-input class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
+    <button type="button" data-remove-specific-date class="px-3 py-2 rounded-lg border border-slate-300 text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-100 transition-colors">Remover</button>
+  `;
+  specificDatesList.appendChild(row);
+}
+
+function setEventSpecificDates(dates) {
+  if (!specificDatesList) return;
+  specificDatesList.innerHTML = "";
+  (dates || []).forEach((date) => addSpecificDateInput(date));
+}
+
+function getEventSpecificDates() {
+  if (!specificDatesList) return [];
+  const values = Array.from(specificDatesList.querySelectorAll("[data-specific-date-input]"), (input) => String(input.value || "").trim())
+    .filter(Boolean);
+  return [...new Set(values)].sort();
+}
+
+function addEventGalleryExtraInput() {
+  if (!eventGalleryExtraInputs) return;
+  const row = document.createElement("div");
+  row.className = "relative";
+  row.innerHTML = `
+    <label class="group block cursor-pointer rounded-2xl border-2 border-dashed border-slate-300 bg-white px-5 py-6 text-center transition hover:border-marron/60 hover:bg-[#fffaf7]">
+      <input type="file" accept="image/*" data-event-gallery-single data-event-image-input class="sr-only">
+      <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Foto adicional</p>
+      <p data-event-file-label-text class="mt-2 text-xs text-slate-400">Clique para escolher arquivo</p>
+      <p data-image-soft-warn class="hidden mt-2 text-[11px] font-medium text-amber-800"></p>
+    </label>
+    <button type="button" data-remove-event-gallery-input class="absolute right-2 top-2 px-2.5 py-1.5 rounded-full border border-slate-300 bg-white text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-100 transition-colors">X</button>
+  `;
+  eventGalleryExtraInputs.appendChild(row);
+  const input = row.querySelector('input[type="file"]');
+  const warn = row.querySelector("[data-image-soft-warn]");
+  if (input) {
+    input.addEventListener("change", () => {
+      const files = Array.from(input.files || []);
+      const bigger = files.filter((file) => file.size > IMAGE_SOFT_LIMIT_BYTES);
+      updateEventFileTileLabel(input);
+      if (!warn) return;
+      if (!bigger.length) {
+        warn.classList.add("hidden");
+        warn.textContent = "";
+        return;
+      }
+      const mb = (bigger[0].size / (1024 * 1024)).toFixed(1);
+      warn.textContent = `Aviso: arquivo acima de 5 MB (~${mb} MB).`;
+      warn.classList.remove("hidden");
+    });
+  }
+}
+
+function clearEventGalleryExtraInputs() {
+  if (!eventGalleryExtraInputs) return;
+  eventGalleryExtraInputs.innerHTML = "";
+}
+
+function updateEventFileTileLabel(input) {
+  if (!input) return;
+  const labelText = input.parentElement?.querySelector("[data-event-file-label-text]");
+  if (!labelText) return;
+  const files = Array.from(input.files || []);
+  if (!files.length) {
+    labelText.textContent = "Nenhum arquivo selecionado";
+    return;
+  }
+  if (files.length === 1) {
+    labelText.textContent = files[0].name;
+    return;
+  }
+  labelText.textContent = `${files.length} arquivos selecionados`;
+}
+
+function refreshEventFileTileLabels() {
+  eventForm.querySelectorAll("[data-event-image-input]").forEach((input) => {
+    if (!(input instanceof HTMLInputElement)) return;
+    updateEventFileTileLabel(input);
+  });
+}
+
+function setEventExistingPhotos(urls) {
+  if (!eventExistingPhotos || !eventExistingPhotosText) return;
+  if (!Array.isArray(urls) || !urls.length) {
+    eventExistingPhotos.classList.add("hidden");
+    eventExistingPhotosText.textContent = "";
+    return;
+  }
+  eventExistingPhotos.classList.remove("hidden");
+  eventExistingPhotosText.textContent = `${urls.length} foto(s) cadastrada(s) atualmente.`;
+}
+
+function formatAdminEventRecurrence(event) {
+  const type = String(event.recurrence_type || "none");
+  if (type === "weekly") {
+    const labels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"];
+    const days = (Array.isArray(event.weekdays) ? event.weekdays : [])
+      .map((n) => Number(n))
+      .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6)
+      .sort((a, b) => a - b)
+      .map((n) => labels[n]);
+    return days.length ? `Semanal: ${days.join(", ")}` : "Semanal";
+  }
+  if (type === "specific_dates") {
+    const count = Array.isArray(event.specific_dates) ? event.specific_dates.length : 0;
+    return count ? `${count} data(s) especifica(s)` : "Datas especificas";
+  }
+  return "Periodo continuo";
+}
+
+function formatAdminEventPeriodLine(event) {
+  const start = String(event.period_start || "").trim();
+  const end = String(event.period_end || "").trim();
+  if (!start && !end) return "Data a confirmar";
+  const toBr = (value) => {
+    const parts = String(value || "").split("-");
+    if (parts.length !== 3) return value || "";
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  };
+  return `Inicio: ${toBr(start || end)} · Fim: ${toBr(end || start)}`;
 }
 
 function openStoreForm() {
@@ -275,6 +439,25 @@ function createAdminCard(store) {
 }
 
 function createAdminEventCard(event) {
+  const eventImages = (() => {
+    if (Array.isArray(event.images)) return event.images;
+    if (typeof event.images === "string") {
+      try {
+        const parsed = JSON.parse(event.images);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_error) {
+        return [];
+      }
+    }
+    return [];
+  })();
+  const photoCount = eventImages.length || (event.image_url ? 1 : 0);
+  const recurrenceLabelMap = {
+    none: "Periodo continuo",
+    weekly: "Semanal",
+    specific_dates: "Datas especificas"
+  };
+  const recurrenceLabel = recurrenceLabelMap[String(event.recurrence_type || "none")] || "Periodo continuo";
   const card = document.createElement("article");
   card.className = "rounded-[1.5rem] overflow-hidden bg-white border border-[#eddcd2] shadow-sm h-full flex flex-col";
   card.innerHTML = `
@@ -286,8 +469,11 @@ function createAdminEventCard(event) {
         <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">${event.event_date}</span>
         ${event.highlight ? '<span class="rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-amber-700">Destaque</span>' : ""}
       </div>
-      <h4 class="mt-3 text-2xl font-serif italic text-slate-900 leading-tight">${event.title}</h4>
+      <h4 class="mt-3 text-2xl font-serif italic text-slate-900 leading-tight line-clamp-1">${event.title}</h4>
+      <p class="mt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-500">${formatAdminEventPeriodLine(event)}</p>
       <p class="mt-3 text-sm text-slate-500 leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${event.description}</p>
+      <p class="mt-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400">${photoCount} foto(s) · ${recurrenceLabel}</p>
+      <p class="mt-1 text-[11px] text-slate-500">${formatAdminEventRecurrence(event)}</p>
       <div class="mt-auto pt-4 flex justify-end gap-2" data-event-actions></div>
     </div>
   `;
@@ -301,9 +487,17 @@ function createAdminEventCard(event) {
       eventForm.elements.id.value = String(event.id);
       openEventForm();
       eventForm.elements.title.value = event.title;
-      eventForm.elements.eventDate.value = event.event_date;
+      eventForm.elements.periodStart.value = event.period_start || "";
+      eventForm.elements.periodEnd.value = event.period_end || "";
+      eventForm.elements.recurrenceType.value = event.recurrence_type || "none";
+      setEventWeekdays(Array.isArray(event.weekdays) ? event.weekdays : []);
+      setEventSpecificDates(Array.isArray(event.specific_dates) ? event.specific_dates : []);
+      syncEventRecurrenceOptions();
       eventForm.elements.description.value = event.description;
       eventForm.elements.imageUrl.value = event.image_url || "";
+      eventForm.elements.imageUrls.value = JSON.stringify(eventImages);
+      clearEventGalleryExtraInputs();
+      setEventExistingPhotos(eventImages);
       eventForm.elements.highlight.checked = Boolean(event.highlight);
       cancelEventEditBtn.classList.remove("hidden");
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -625,7 +819,9 @@ openStoreFormBtn.addEventListener("click", () => {
 
 eventForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const fileInput = eventForm.querySelector('[data-event-file-for="imageUrl"]');
+  const coverInput = eventForm.querySelector("[data-event-cover-file]");
+  const batchInput = eventForm.querySelector("[data-event-gallery-batch]");
+  const singleInputs = Array.from(eventForm.querySelectorAll("[data-event-gallery-single]"));
   const submitBtn = eventForm.querySelector('button[type="submit"]');
   const previousSubmitLabel = submitBtn ? submitBtn.textContent : "Salvar evento";
 
@@ -635,22 +831,71 @@ eventForm.addEventListener("submit", async (event) => {
       submitBtn.textContent = "Processando...";
     }
 
-    if (fileInput?.files?.[0]) {
-      setAdminMessage("Enviando imagem do evento...");
-      if (submitBtn) submitBtn.textContent = "Enviando imagem...";
-      const uploaded = await uploadAdminImageFile(fileInput.files[0]);
-      eventForm.elements.imageUrl.value = uploaded.url || "";
-      fileInput.value = "";
-      clearImageSoftHintForFileInput(fileInput);
-    }
-
     const formData = new FormData(eventForm);
     const id = String(formData.get("id") || "");
+    let coverUrl = String(formData.get("imageUrl") || "").trim();
+    let galleryUrls = [];
+    try {
+      galleryUrls = JSON.parse(String(formData.get("imageUrls") || "[]"));
+      if (!Array.isArray(galleryUrls)) galleryUrls = [];
+    } catch (_error) {
+      galleryUrls = [];
+    }
+
+    if (coverInput?.files?.[0]) {
+      setAdminMessage("Enviando capa do evento...");
+      if (submitBtn) submitBtn.textContent = "Enviando capa...";
+      const uploadedCover = await uploadAdminImageFile(coverInput.files[0]);
+      coverUrl = String(uploadedCover.url || "").trim();
+      coverInput.value = "";
+      clearImageSoftHintForFileInput(coverInput);
+    }
+
+    const galleryFiles = [
+      ...Array.from(batchInput?.files || []),
+      ...singleInputs.map((input) => input.files?.[0]).filter(Boolean)
+    ];
+    if (galleryFiles.length) {
+      setAdminMessage("Enviando fotos da galeria...");
+      if (submitBtn) submitBtn.textContent = `Enviando ${galleryFiles.length} foto(s)...`;
+      const uploadedGallery = await Promise.all(galleryFiles.map((file) => uploadAdminImageFile(file)));
+      const newGalleryUrls = uploadedGallery.map((item) => String(item.url || "").trim()).filter(Boolean);
+      galleryUrls = [...galleryUrls, ...newGalleryUrls];
+      if (batchInput) {
+        batchInput.value = "";
+        clearImageSoftHintForFileInput(batchInput);
+      }
+      singleInputs.forEach((input) => {
+        input.value = "";
+        clearImageSoftHintForFileInput(input);
+      });
+      clearEventGalleryExtraInputs();
+    }
+
+    if (coverUrl && !galleryUrls.includes(coverUrl)) {
+      galleryUrls.unshift(coverUrl);
+    }
+    if (!coverUrl && galleryUrls.length) {
+      coverUrl = galleryUrls[0];
+    }
+    if (!coverUrl) {
+      throw new Error("Selecione ao menos a imagem principal (capa) do evento.");
+    }
+    eventForm.elements.imageUrl.value = coverUrl;
+    eventForm.elements.imageUrls.value = JSON.stringify(galleryUrls);
+    setEventExistingPhotos(galleryUrls);
+
     const payload = {
       title: String(formData.get("title") || "").trim(),
-      eventDate: String(formData.get("eventDate") || "").trim(),
+      periodStart: String(formData.get("periodStart") || "").trim(),
+      periodEnd: String(formData.get("periodEnd") || "").trim(),
+      recurrenceType: String(formData.get("recurrenceType") || "none"),
+      weekdays: Array.from(eventForm.querySelectorAll('input[name="weekdays"]:checked'), (input) => Number(input.value))
+        .filter((n) => Number.isInteger(n) && n >= 0 && n <= 6),
+      specificDates: getEventSpecificDates(),
       description: String(formData.get("description") || "").trim(),
-      imageUrl: String(formData.get("imageUrl") || "").trim(),
+      imageUrl: coverUrl,
+      imageUrls: galleryUrls,
       highlight: formData.get("highlight") === "on"
     };
 
@@ -690,7 +935,42 @@ openEventFormBtn.addEventListener("click", () => {
     return;
   }
   openEventForm();
+  syncEventRecurrenceOptions();
+  setEventExistingPhotos([]);
 });
+if (addEventPhotoInputBtn) {
+  addEventPhotoInputBtn.addEventListener("click", () => {
+    addEventGalleryExtraInput();
+  });
+}
+if (eventForm.elements.recurrenceType) {
+  eventForm.elements.recurrenceType.addEventListener("change", () => {
+    syncEventRecurrenceOptions();
+  });
+}
+if (addSpecificDateBtn) {
+  addSpecificDateBtn.addEventListener("click", () => addSpecificDateInput(""));
+}
+if (specificDatesList) {
+  specificDatesList.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const removeBtn = target.closest("[data-remove-specific-date]");
+    if (!removeBtn) return;
+    const row = removeBtn.parentElement;
+    if (row) row.remove();
+  });
+}
+if (eventGalleryExtraInputs) {
+  eventGalleryExtraInputs.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const removeBtn = target.closest("[data-remove-event-gallery-input]");
+    if (!removeBtn) return;
+    const row = removeBtn.parentElement;
+    if (row) row.remove();
+  });
+}
 adminUserMenuBtn.addEventListener("click", () => {
   adminUserDropdown.classList.toggle("hidden");
 });
@@ -730,4 +1010,5 @@ async function bootstrap() {
 }
 
 setupImageSoftLimitWarnings();
+syncEventRecurrenceOptions();
 bootstrap();
