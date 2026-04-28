@@ -31,6 +31,7 @@ const adminGastronomyState = document.getElementById("adminGastronomyState");
 const saveGastronomySelectionBtn = document.getElementById("saveGastronomySelectionBtn");
 const gastronomySelectionPanel = document.getElementById("gastronomySelectionPanel");
 const openGastronomyPanelBtn = document.getElementById("openGastronomyPanelBtn");
+const closeGastronomyModalBtn = document.getElementById("closeGastronomyModalBtn");
 const adminUserMenu = document.getElementById("adminUserMenu");
 const adminUserMenuBtn = document.getElementById("adminUserMenuBtn");
 const adminUserDropdown = document.getElementById("adminUserDropdown");
@@ -439,11 +440,15 @@ function closeEventForm() {
 }
 
 function openGastronomySelectionPanel() {
+  openEditModal(gastronomySelectionPanel);
   gastronomySelectionPanel.classList.remove("hidden");
-  openGastronomyPanelBtn.textContent = "Fechar";
+  openGastronomyPanelBtn.textContent = "Gerenciar selecao";
 }
 
 function closeGastronomySelectionPanel() {
+  if (activeEditModalForm === gastronomySelectionPanel) {
+    closeActiveEditModal();
+  }
   gastronomySelectionPanel.classList.add("hidden");
   openGastronomyPanelBtn.textContent = "Gerenciar selecao";
 }
@@ -822,14 +827,16 @@ loginForm.addEventListener("submit", async (event) => {
 });
 
 openGastronomyPanelBtn.addEventListener("click", () => {
-  const isOpen = !gastronomySelectionPanel.classList.contains("hidden");
-  if (isOpen) {
+  if (activeEditModalForm === gastronomySelectionPanel) {
     closeGastronomySelectionPanel();
     return;
   }
   openGastronomySelectionPanel();
   loadGastronomySelection();
 });
+if (closeGastronomyModalBtn) {
+  closeGastronomyModalBtn.addEventListener("click", closeGastronomySelectionPanel);
+}
 
 saveGastronomySelectionBtn.addEventListener("click", async () => {
   try {
@@ -1213,6 +1220,10 @@ if (adminEditModalBackdrop) {
     }
     if (activeEditModalForm === eventForm) {
       resetEventForm();
+      return;
+    }
+    if (activeEditModalForm === gastronomySelectionPanel) {
+      closeGastronomySelectionPanel();
     }
   });
 }
@@ -1224,6 +1235,10 @@ document.addEventListener("keydown", (event) => {
   }
   if (activeEditModalForm === eventForm) {
     resetEventForm();
+    return;
+  }
+  if (activeEditModalForm === gastronomySelectionPanel) {
+    closeGastronomySelectionPanel();
   }
 });
 adminUserMenuBtn.addEventListener("click", () => {

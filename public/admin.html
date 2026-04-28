@@ -34,7 +34,8 @@
             backdrop-filter: blur(2px);
         }
         #storeForm.is-edit-modal,
-        #eventForm.is-edit-modal {
+        #eventForm.is-edit-modal,
+        #gastronomySelectionPanel.is-edit-modal {
             position: fixed;
             left: 50%;
             top: 50%;
@@ -78,9 +79,46 @@
             padding: 0.75rem 1.25rem;
             justify-content: flex-end;
         }
+        #gastronomySelectionPanel.is-edit-modal {
+            padding: 1.25rem;
+        }
+        #gastronomySelectionPanel .gastronomy-modal-close { display: none; }
+        #gastronomySelectionPanel.is-edit-modal .gastronomy-modal-close {
+            display: flex;
+            justify-content: flex-end;
+            position: sticky;
+            top: -1.25rem;
+            z-index: 2;
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            margin-left: -1.25rem;
+            margin-right: -1.25rem;
+            margin-top: -1.25rem;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem 1.25rem 0.5rem;
+        }
+        #gastronomySelectionPanel .gastronomy-modal-actions { display: none; }
+        #gastronomySelectionPanel.is-edit-modal .gastronomy-modal-actions {
+            display: flex;
+            position: sticky;
+            bottom: -1.25rem;
+            z-index: 2;
+            background: #fff;
+            border-top: 1px solid #e8e8e8;
+            margin-left: -1.25rem;
+            margin-right: -1.25rem;
+            margin-bottom: 0;
+            padding: 0.75rem 1.25rem;
+            justify-content: flex-end;
+            margin-top: 0.75rem;
+        }
+        #gastronomySelectionPanel.is-edit-modal #saveGastronomySelectionBtn {
+            width: auto;
+        }
         @media (max-width: 768px) {
             #storeForm.is-edit-modal,
-            #eventForm.is-edit-modal {
+            #eventForm.is-edit-modal,
+            #gastronomySelectionPanel.is-edit-modal {
                 width: 94vw;
                 max-height: 90vh;
                 padding: 1rem;
@@ -101,6 +139,20 @@
                 margin-top: -1rem;
                 margin-bottom: 0.5rem;
                 padding: 0.75rem 1rem 0.5rem;
+            }
+            #gastronomySelectionPanel.is-edit-modal .gastronomy-modal-close {
+                top: -1rem;
+                margin-left: -1rem;
+                margin-right: -1rem;
+                margin-top: -1rem;
+                margin-bottom: 0.5rem;
+                padding: 0.75rem 1rem 0.5rem;
+            }
+            #gastronomySelectionPanel.is-edit-modal .gastronomy-modal-actions {
+                bottom: -1rem;
+                margin-left: -1rem;
+                margin-right: -1rem;
+                padding: 0.75rem 1rem;
             }
         }
     </style>
@@ -373,12 +425,17 @@
                     Escolha quais lojas aparecem na seção de gastronomia do site. Clique em Gerenciar selecao para marcar ou desmarcar.
                 </p>
                 <div id="gastronomySelectionPanel" class="hidden space-y-4">
+                    <div class="gastronomy-modal-close">
+                        <button id="closeGastronomyModalBtn" type="button" class="w-9 h-9 rounded-full border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 transition-colors grid place-items-center" aria-label="Fechar gerenciamento de gastronomia">✕</button>
+                    </div>
                     <p class="text-sm text-slate-500 max-w-3xl">
                         Os dados exibidos no site (nome, categoria, local, imagem) vêm do cadastro da propria loja.
                     </p>
                     <div id="adminGastronomyState" class="ml-auto w-fit rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-600" style="box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;">Carregando lojas...</div>
                     <div id="adminGastronomyList" class="max-h-96 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 space-y-1"></div>
-                    <button id="saveGastronomySelectionBtn" type="button" class="px-7 py-3 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors w-fit">Salvar selecao</button>
+                    <div class="gastronomy-modal-actions">
+                        <button id="saveGastronomySelectionBtn" type="button" class="px-7 py-3 rounded-full text-xs font-bold uppercase tracking-widest bg-marron text-white hover:bg-black transition-colors w-fit">Salvar selecao</button>
+                    </div>
                 </div>
             </div>
         </section>
