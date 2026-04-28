@@ -146,7 +146,7 @@ function renderStores(filter = "all") {
     card.className = "store-card group cursor-pointer border border-slate-100";
     card.dataset.storeId = String(store.id ?? "");
     const logoBlock = `
-      <div class="absolute z-20 -bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-white p-1.5 shadow-md ring-1 ring-slate-100">
+      <div class="absolute z-20 -bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-white p-1 shadow-md ring-1 ring-slate-100">
         ${
           store.logoUrl
             ? `<img src="${store.logoUrl}" alt="Logo ${store.name}" class="w-full h-full rounded-full object-cover">`

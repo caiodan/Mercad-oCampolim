@@ -207,7 +207,7 @@ function createAdminCard(store) {
       <div class="aspect-[16/9] overflow-hidden">
         <img src="${store.image_url || "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1200"}" class="w-full h-full object-cover" alt="${store.name}">
       </div>
-      <div class="absolute z-20 -bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-white p-1.5 shadow-md ring-1 ring-slate-100">
+      <div class="absolute z-20 -bottom-8 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full bg-white p-1 shadow-md ring-1 ring-slate-100">
         ${
           store.logo_url
             ? `<img src="${store.logo_url}" alt="Logo ${store.name}" class="w-full h-full rounded-full object-cover">`
