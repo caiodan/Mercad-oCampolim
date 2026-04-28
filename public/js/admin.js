@@ -217,7 +217,7 @@ function createAdminCard(store) {
     </div>
     <div class="p-6 pt-11 text-slate-800 mt-[8px]">
       <span class="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600">${formatAdminCategoriesLine(store)}</span>
-      <h4 class="text-2xl font-serif italic mt-2 group-hover:text-marron transition-colors leading-tight">${store.name}</h4>
+      <h4 class="text-2xl font-serif italic mt-2 uppercase group-hover:text-marron transition-colors leading-tight">${store.name}</h4>
       <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-5 border-t border-slate-50 pt-4">
         <i data-lucide="map-pin" class="w-3 h-3 text-marron"></i>
         <span class="font-bold uppercase tracking-widest">${store.floor}</span>

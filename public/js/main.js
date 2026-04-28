@@ -171,7 +171,7 @@ function renderStores(filter = "all") {
         <span class="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600">${(store.categoryKeys || [])
           .map((k) => formatCategoryLabel(k))
           .join(" · ")}</span>
-        <h4 class="text-2xl font-serif italic mt-2 group-hover:text-marron transition-colors leading-tight">${store.name}</h4>
+        <h4 class="text-2xl font-serif italic mt-2 uppercase group-hover:text-marron transition-colors leading-tight">${store.name}</h4>
         <div class="flex items-center gap-2 text-[11px] text-slate-400 mt-5 border-t border-slate-50 pt-4">
           <i data-lucide="map-pin" class="w-3 h-3 text-marron"></i>
           <span class="font-bold uppercase tracking-widest">${store.location}</span>
@@ -605,7 +605,7 @@ function openModal(store) {
 
   if (!modalTitle || !modalCat || !modalDesc || !modalLoc || !modalHours || !modalImg) return;
 
-  modalTitle.innerText = store.name || "Loja";
+  modalTitle.innerText = (store.name || "Loja").toUpperCase();
   modalCat.innerText =
     (store.categoryKeys || []).map((k) => formatCategoryLabel(k)).join(" · ") || "Categoria";
   modalDesc.innerText = store.desc || "Sem descrição disponível.";
