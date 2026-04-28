@@ -322,20 +322,47 @@ function selectHighlightEvent(sortedEvents) {
   return sortedEvents[0];
 }
 
-/**
- * Velocidade do marquee: antes era "uma volta em 7s", o que em telas estreitas
- * (trilho curto em px) virava poucos px/s — sensação de sumiço / faixa vazia.
- * Usamos a mesma referência (7s) como ideal, mas limitamos px/s para não arrastar
- * nem disparar demais em monitores largos.
- */
+/** px/s — ritmo bem lento em qualquer largura */
+const GASTRONOMY_MARQUEE_BASE_MS_PER_SET = 26000;
+const GASTRONOMY_MARQUEE_MIN_PX_PER_SEC = 28;
+const GASTRONOMY_MARQUEE_MAX_PX_PER_SEC = 72;
+
 function gastronomyMarqueeSpeedPxPerMs(oneSetWidthPx) {
-  const BASE_MS_PER_SET = 7000;
-  const MIN_PX_PER_SEC = 130;
-  const MAX_PX_PER_SEC = 340;
-  const ideal = oneSetWidthPx / BASE_MS_PER_SET;
-  const minV = MIN_PX_PER_SEC / 1000;
-  const maxV = MAX_PX_PER_SEC / 1000;
+  const ideal = oneSetWidthPx / GASTRONOMY_MARQUEE_BASE_MS_PER_SET;
+  const minV = GASTRONOMY_MARQUEE_MIN_PX_PER_SEC / 1000;
+  const maxV = GASTRONOMY_MARQUEE_MAX_PX_PER_SEC / 1000;
   return Math.min(maxV, Math.max(minV, ideal));
+}
+
+/** Mantém translate no intervalo (-w, 0] para o loop não “escapar” com float ou saltos de frame */
+function gastronomyNormalizeLoopPosition(pos, w) {
+  if (!Number.isFinite(pos) || w <= 0) return 0;
+  let p = pos;
+  while (p <= -w) p += w;
+  while (p > 0) p -= w;
+  return p;
+}
+
+/**
+ * Largura de uma cópia do conteúdo: distância entre o 1º card da 1ª sequência e o 1º da 2ª.
+ * Mais estável que scrollWidth/3 com flex + gap em escalas/DPR diferentes (Safari inclusive).
+ */
+function measureGastronomyOneSetWidth(track) {
+  const cards = track.querySelectorAll(".gastronomy-card");
+  const total = cards.length;
+  if (total < 3 || total % 3 !== 0) {
+    const sw = track.scrollWidth;
+    return Number.isFinite(sw) && sw > 0 ? sw / 3 : 0;
+  }
+  const perCopy = total / 3;
+  const r0 = cards[0].getBoundingClientRect();
+  const r1 = cards[perCopy].getBoundingClientRect();
+  const measured = r1.left - r0.left;
+  if (Number.isFinite(measured) && measured > 0.5) {
+    return measured;
+  }
+  const sw = track.scrollWidth;
+  return Number.isFinite(sw) && sw > 0 ? sw / 3 : 0;
 }
 
 /**
@@ -356,14 +383,14 @@ function startGastronomyMarquee(track) {
 
   function updateMetrics() {
     if (gen !== _gastronomyMarqueeGen) return;
-    const sw = track.scrollWidth;
-    const next = sw / 3;
+    const next = measureGastronomyOneSetWidth(track);
     if (!Number.isFinite(next) || next <= 0) return;
     const prev = oneSetWidth;
     oneSetWidth = next;
-    if (prev > 0 && Math.abs(next - prev) > 1) {
+    if (prev > 0 && Math.abs(next - prev) > 0.25) {
       position = (position / prev) * next;
     }
+    position = gastronomyNormalizeLoopPosition(position, oneSetWidth);
     track.style.transform = "translateX(" + position.toFixed(3) + "px)";
   }
 
@@ -387,6 +414,10 @@ function startGastronomyMarquee(track) {
       updateMetrics();
     });
     _gastronomyResizeObserver.observe(track);
+    const carouselEl = track.parentElement;
+    if (carouselEl) {
+      _gastronomyResizeObserver.observe(carouselEl);
+    }
   }
 
   if (document.readyState === "complete") {
@@ -403,9 +434,7 @@ function startGastronomyMarquee(track) {
 
     if (!document.hidden && oneSetWidth > 0) {
       position -= gastronomyMarqueeSpeedPxPerMs(oneSetWidth) * elapsed;
-      if (position <= -oneSetWidth) {
-        position += oneSetWidth;
-      }
+      position = gastronomyNormalizeLoopPosition(position, oneSetWidth);
       track.style.transform = "translateX(" + position.toFixed(3) + "px)";
     }
 
