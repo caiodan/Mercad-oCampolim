@@ -215,7 +215,8 @@ function formatCategoryLabel(category) {
     bebidas: "Bebidas",
     servicos: "Serviços",
     roupas: "Roupas",
-    infantil: "Infantil"
+    infantil: "Infantil",
+    fitness: "Fitness"
   };
   if (labelMap[normalized]) return labelMap[normalized];
   if (!category) return "Serviços";
