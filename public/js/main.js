@@ -892,10 +892,10 @@ function renderFullCalendar() {
   sortedEvents.forEach((event) => {
     const card = document.createElement("article");
     card.dataset.eventId = String(event.id ?? "");
-    card.className = "bg-white rounded-[1.5rem] overflow-hidden shadow-sm border border-[#eddcd2]";
+    card.className = "calendar-card cursor-pointer border border-[#eddcd2]";
     card.innerHTML = `
       <div class="h-52 overflow-hidden">
-        <img src="${event.image_url || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="w-full h-full object-cover" alt="${event.title}">
+        <img src="${event.image_url || "https://images.unsplash.com/photo-1515169067868-5387ec356754?w=1200"}" class="calendar-card-image w-full h-full object-cover" alt="${event.title}">
       </div>
       <div class="p-6">
         <div class="flex items-center justify-between gap-3">
